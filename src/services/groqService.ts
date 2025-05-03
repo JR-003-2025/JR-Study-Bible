@@ -57,11 +57,19 @@ For each result, provide:
 };
 
 const getGroqApiKey = (): string => {
-  const key = import.meta.env.VITE_GROQ_API_KEY;
+  // First try the environment variable
+  const envKey = import.meta.env.VITE_GROQ_API_KEY;
+  
+  // If env variable is not set, use the hardcoded key
+  const hardcodedKey = "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";
+  
+  const key = envKey || hardcodedKey;
+  
   if (!key) {
     console.error("Missing Groq API key. Set VITE_GROQ_API_KEY in your environment variables.");
     throw new Error("Missing Groq API key.");
   }
+  
   return key;
 };
 
