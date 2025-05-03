@@ -21,45 +21,25 @@ type AuthContextType = {
   resetPassword: (email: string) => Promise<void>;
 };
 
-// Create Supabase client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Create Supabase client with direct URL and key
+const supabaseUrl = "https://pvhtxtterldqbrumozqn.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2aHR4dHRlcmxkcWJydW1venFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyOTYxMzMsImV4cCI6MjA2MTg3MjEzM30.KLo6_Pah5NS2syI44XaGemnlEeFJ-pL2X0B8TMkH8Ts";
 
-// Check if Supabase credentials are available
-const isMissingSupabaseCredentials = !supabaseUrl || !supabaseKey;
-
-// Initialize Supabase client only if credentials are available
-const supabase = isMissingSupabaseCredentials ? null : createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Create context
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(!isMissingSupabaseCredentials);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Display warning if Supabase credentials are missing
   useEffect(() => {
-    if (isMissingSupabaseCredentials) {
-      console.warn('Missing Supabase credentials. Authentication features will not work.');
-      toast({
-        variant: 'destructive',
-        title: 'Missing Supabase Configuration',
-        description: 'Please add your Supabase URL and API key in environment variables.',
-      });
-      setIsLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    // Skip if Supabase credentials are not available
-    if (isMissingSupabaseCredentials) return;
-    
     // Check for existing session
     const checkUser = async () => {
       try {
-        const { data, error } = await supabase!.auth.getSession();
+        const { data, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error fetching session:', error);
@@ -67,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         if (data.session) {
-          const { data: userData } = await supabase!.auth.getUser();
+          const { data: userData } = await supabase.auth.getUser();
           setUser(userData.user as User);
         }
       } catch (error) {
@@ -78,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     // Set up listener for auth changes
-    const { data: authListener } = supabase!.auth.onAuthStateChange((event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
         setUser(session.user as User);
       } else if (event === 'SIGNED_OUT') {
@@ -95,18 +75,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signUp = async (email: string, password: string, fullName?: string) => {
-    if (isMissingSupabaseCredentials) {
-      toast({
-        variant: 'destructive',
-        title: 'Authentication Unavailable',
-        description: 'Supabase configuration is missing. Please set up environment variables.',
-      });
-      return;
-    }
-
     try {
       setIsLoading(true);
-      const { error } = await supabase!.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -135,18 +106,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signIn = async (email: string, password: string) => {
-    if (isMissingSupabaseCredentials) {
-      toast({
-        variant: 'destructive',
-        title: 'Authentication Unavailable',
-        description: 'Supabase configuration is missing. Please set up environment variables.',
-      });
-      return;
-    }
-
     try {
       setIsLoading(true);
-      const { error } = await supabase!.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -170,18 +132,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    if (isMissingSupabaseCredentials) {
-      toast({
-        variant: 'destructive',
-        title: 'Authentication Unavailable',
-        description: 'Supabase configuration is missing. Please set up environment variables.',
-      });
-      return;
-    }
-
     try {
       setIsLoading(true);
-      const { error } = await supabase!.auth.signOut();
+      const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
       toast({
@@ -200,18 +153,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const resetPassword = async (email: string) => {
-    if (isMissingSupabaseCredentials) {
-      toast({
-        variant: 'destructive',
-        title: 'Authentication Unavailable',
-        description: 'Supabase configuration is missing. Please set up environment variables.',
-      });
-      return;
-    }
-
     try {
       setIsLoading(true);
-      const { error } = await supabase!.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
       if (error) throw error;
       
       toast({
