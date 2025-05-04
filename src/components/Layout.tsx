@@ -3,6 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Book, LogOut, User } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export function Header() {
   const { user, signOut } = useAuth();
@@ -12,11 +13,17 @@ export function Header() {
       <div className="container mx-auto flex justify-between items-center">
         <div className="flex items-center gap-3">
           <Book className="h-8 w-8 text-bible-gold" />
-          <h1 className="text-2xl font-serif font-bold">JR Study Bible</h1>
+          <Link to="/" className="text-2xl font-serif font-bold">JR Study Bible</Link>
         </div>
         
         {user && (
           <div className="flex items-center gap-4">
+            <Link to="/dashboard" className="text-white hover:text-bible-gold">
+              <Button variant="ghost" size="sm" className="text-white">
+                <User className="h-4 w-4 mr-2" />
+                Dashboard
+              </Button>
+            </Link>
             <div className="flex items-center gap-2">
               <User className="h-4 w-4" />
               <span className="text-sm font-medium">

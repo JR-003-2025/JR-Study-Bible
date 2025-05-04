@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GroqRequestParams, fetchGroqResponse } from "@/services/groqService";
 import { Loader2 } from "lucide-react";
+import { ResponseActions } from "./ResponseActions";
 
 // Exegesis Tool Component
 export function ExegesisTool() {
@@ -94,6 +95,12 @@ export function ExegesisTool() {
               return paragraph.trim() ? <p key={idx} className="my-2">{paragraph}</p> : <br key={idx} />;
             })}
           </div>
+          
+          <ResponseActions 
+            content={result} 
+            type="exegesis" 
+            passage={passage}
+          />
         </div>
       )}
     </div>
@@ -173,6 +180,11 @@ export function BibleQATool() {
               return paragraph.trim() ? <p key={idx} className="my-2">{paragraph}</p> : <br key={idx} />;
             })}
           </div>
+          
+          <ResponseActions 
+            content={answer} 
+            type="qa" 
+          />
         </div>
       )}
     </div>
@@ -260,6 +272,11 @@ export function SermonTool() {
               return paragraph.trim() ? <p key={idx} className="my-2">{paragraph}</p> : <br key={idx} />;
             })}
           </div>
+          
+          <ResponseActions 
+            content={sermon} 
+            type="sermon" 
+          />
         </div>
       )}
     </div>
@@ -347,6 +364,11 @@ export function BibleSearchTool() {
               return paragraph.trim() ? <p key={idx} className="my-2">{paragraph}</p> : <br key={idx} />;
             })}
           </div>
+          
+          <ResponseActions 
+            content={searchResults} 
+            type="search" 
+          />
         </div>
       )}
     </div>
