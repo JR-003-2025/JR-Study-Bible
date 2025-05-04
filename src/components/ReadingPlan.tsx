@@ -5,6 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { BookOpen, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 
 type ReadingEntry = {
   id: string;
@@ -91,13 +92,6 @@ export function ReadingPlan() {
     }
   };
 
-  const handleReadNow = (passage: string) => {
-    // In a real app, this would open the Bible reading view with the passage
-    toast.info(`Opening "${passage}" for reading`, {
-      description: "This would open the Bible reading interface"
-    });
-  };
-
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -140,10 +134,12 @@ export function ReadingPlan() {
                 size="sm" 
                 variant="outline" 
                 className="flex items-center gap-1"
-                onClick={() => handleReadNow(entry.passage)}
+                asChild
               >
-                <BookOpen className="h-4 w-4" />
-                <span>Read</span>
+                <Link to={`/bible?reference=${encodeURIComponent(entry.passage)}`}>
+                  <BookOpen className="h-4 w-4" />
+                  <span>Read</span>
+                </Link>
               </Button>
             </div>
           </div>

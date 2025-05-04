@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,24 +16,33 @@ export function Header() {
           <Link to="/" className="text-2xl font-serif font-bold">JR Study Bible</Link>
         </div>
         
-        {user && <div className="flex items-center gap-4">
-            <Link to="/dashboard" className="text-white hover:text-bible-gold">
-              <Button variant="ghost" size="sm" className="text-white">
-                <User className="h-4 w-4 mr-2" />
-                Dashboard
-              </Button>
-            </Link>
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              <span className="text-sm font-medium">
-                {user.user_metadata?.full_name || user.email}
-              </span>
-            </div>
-            <Button variant="ghost" size="sm" onClick={signOut} className="text-white">
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
+        <div className="flex items-center gap-2">
+          <Link to="/bible" className="text-white hover:text-bible-gold">
+            <Button variant="ghost" size="sm" className="text-white">
+              <Book className="h-4 w-4 mr-2" />
+              Bible
             </Button>
-          </div>}
+          </Link>
+          
+          {user && <div className="flex items-center gap-4">
+              <Link to="/dashboard" className="text-white hover:text-bible-gold">
+                <Button variant="ghost" size="sm" className="text-white">
+                  <User className="h-4 w-4 mr-2" />
+                  Dashboard
+                </Button>
+              </Link>
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                <span className="text-sm font-medium">
+                  {user.user_metadata?.full_name || user.email}
+                </span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={signOut} className="text-white">
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>}
+        </div>
       </div>
     </header>;
 }
