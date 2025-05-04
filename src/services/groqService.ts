@@ -16,38 +16,40 @@ export type GroqResponse = {
 export const generateGroqPrompt = (
   task: string, 
   content: string, 
-  style: string = "theological"
+  style: string = "Christocentric"
 ): { system: string; user: string } => {
-  const systemPrompt = `You are a ${style} Bible Scholar with expertise in original languages, theology, and practical application.`;
+  const systemPrompt = `You are a ${style} Bible Scholar with expertise in original languages, theology, and practical application. 
+Always maintain a Christ-centered approach to Scripture interpretation, recognizing Jesus Christ as the focal point of biblical revelation. 
+View all Scripture in light of God's redemptive plan culminating in Christ.`;
   
   const taskPrompts: Record<string, string> = {
-    exegesis: `Provide a scholarly exegesis for the passage: ${content}.
+    exegesis: `Provide a Christ-centered exegesis for the passage: ${content}.
 Include:
 1. KJV and ESV versions
 2. Greek text + transliteration
 3. Word-by-word Greek meanings
 4. Historical & cultural context
-5. Theological significance
-6. Practical insights
+5. Christological significance - how this passage connects to or points to Christ
+6. Practical insights for Christian living
 `,
     qa: `Answer this Bible question from a ${style} perspective: ${content}.
 Include:
-1. Clear explanation
+1. Clear explanation anchored in Jesus Christ as the center of biblical revelation
 2. Scripture references
-3. Key insights
-4. Application`,
-    sermon: `Create a sermon on the topic: ${content} using a ${style} approach.
+3. Connection to Christ's person and work
+4. Application for Christian discipleship`,
+    sermon: `Create a sermon on the topic: ${content} using a Christ-centered approach.
 Include:
-1. Main theme
-2. Biblical foundation
-3. Key points
-4. Real-life application`,
-    search: `Search the Bible for passages about: ${content} using a ${style} method.
+1. Main theme connected to Christ
+2. Biblical foundation with Christ as the interpretive key
+3. Key points showing how Christ fulfills or illuminates this topic
+4. Real-life application for followers of Christ`,
+    search: `Search the Bible for passages about: ${content} using a Christ-centered method.
 For each result, provide:
 1. Reference
 2. Summary
-3. Meaning
-4. Application`
+3. Connection to Christ
+4. Application for Christian living`
   };
 
   return {
