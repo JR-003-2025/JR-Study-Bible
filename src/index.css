@@ -1,5 +1,5 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@300;400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@300;400;700;900&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -102,10 +102,109 @@
   }
   
   .tool-card {
-    @apply border bg-card p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow;
+    @apply border bg-card p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow hover:border-primary/30 transform hover:-translate-y-1 transition-all duration-200;
   }
 
   .scripture-reference {
     @apply text-bible-blue font-medium;
   }
+  
+  .bible-text-container {
+    @apply py-8 px-4 transition-all duration-300;
+  }
+  
+  .bible-verse {
+    @apply flex items-start w-full py-1 transition-all duration-200 hover:bg-bible-cream/30 rounded;
+  }
+  
+  .bible-verse-dark {
+    @apply hover:bg-white/10;
+  }
+  
+  .verse-num {
+    @apply text-sm font-medium w-7 pt-0.5 text-right mr-3 flex-shrink-0 transition-colors;
+  }
+  
+  .verse-text {
+    @apply flex-1 leading-relaxed;
+  }
+  
+  .verse-highlight-btn {
+    @apply opacity-0 group-hover:opacity-100 transition-opacity;
+  }
+  
+  .bible-navigation {
+    @apply flex justify-between items-center -mx-1 px-1 py-2 sticky top-0 transition-all duration-300 backdrop-blur-sm z-10;
+  }
+  
+  .glassmorphism {
+    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-sm;
+  }
+  
+  .glassmorphism-dark {
+    @apply bg-bible-darkblue/80 backdrop-blur-md border border-white/10 shadow-md;
+  }
+  
+  .fade-in {
+    @apply animate-fade-in;
+  }
+}
+
+@layer keyframes {
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out forwards;
+  }
+  
+  .animate-slide-up {
+    animation: slide-up 0.4s ease-out forwards;
+  }
+}
+
+/* Bible reader specific styles */
+.bible-reader-content {
+  font-family: 'Merriweather', serif;
+}
+
+.bible-reader-content .verse-text {
+  line-height: 1.8;
+}
+
+.bible-reader-controls .select-trigger {
+  @apply transition-all duration-200;
+}
+
+.bible-reader-controls .button {
+  @apply transition-all duration-200;
+}
+
+.immersive-mode .bible-navigation {
+  opacity: 0.6;
+}
+
+.immersive-mode:hover .bible-navigation {
+  opacity: 1;
 }

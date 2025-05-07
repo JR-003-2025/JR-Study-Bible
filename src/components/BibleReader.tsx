@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { 
   BibleVerse, 
   fetchBiblePassage, 
@@ -13,14 +13,31 @@ import {
   BibleVersion
 } from "@/services/bibleService";
 import { DEFAULT_BIBLE_VERSION } from "@/services/apiBibleService";
-import { ChevronLeft, ChevronRight, Bookmark, Book, Loader2 } from "lucide-react";
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Bookmark, 
+  Book, 
+  Loader2,
+  Search,
+  ArrowRight
+} from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 type BibleReaderProps = {
   initialReference?: string;
+  isDarkTheme?: boolean;
+  isImmersiveMode?: boolean;
 };
 
-export function BibleReader({ initialReference = "John 3:16" }: BibleReaderProps) {
+export function BibleReader({ 
+  initialReference = "John 3:16", 
+  isDarkTheme = false,
+  isImmersiveMode = false
+}: BibleReaderProps) {
   const [reference, setReference] = useState<string>(initialReference);
   const [inputReference, setInputReference] = useState<string>(initialReference);
   const [verses, setVerses] = useState<BibleVerse[]>([]);
@@ -32,6 +49,7 @@ export function BibleReader({ initialReference = "John 3:16" }: BibleReaderProps
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [bibleVersions, setBibleVersions] = useState<BibleVersion[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<string>(DEFAULT_BIBLE_VERSION);
+  const [isControlsOpen, setIsControlsOpen] = useState<boolean>(true);
 
   // Load available Bible versions
   useEffect(() => {
@@ -165,150 +183,283 @@ export function BibleReader({ initialReference = "John 3:16" }: BibleReaderProps
 
   if (initialLoading) {
     return (
-      <div className="flex justify-center items-center py-20">
+      <div className="flex justify-center items-center py-20 animate-fade-in">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-bible-blue" />
-          <p>Loading Bible data...</p>
+          <Loader2 className={cn(
+            "h-10 w-10 animate-spin mx-auto mb-4", 
+            isDarkTheme ? "text-bible-gold" : "text-bible-blue"
+          )} />
+          <p className={cn("text-lg font-serif", isDarkTheme ? "text-white/80" : "text-gray-600")}>Loading Bible data...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-3">
+    <div className={cn(
+      "space-y-4 transition-all duration-300",
+      isImmersiveMode ? "immersive-mode" : "",
+      "bible-reader-controls"
+    )}>
+      <Card className={cn(
+        "overflow-hidden transition-all duration-300 border",
+        isDarkTheme 
+          ? "bg-bible-darkblue/95 border-white/10 text-white" 
+          : "bg-white"
+      )}>
+        <CardHeader className={cn(
+          "py-4 px-6 bible-navigation",
+          isDarkTheme ? "glassmorphism-dark" : "glassmorphism",
+          isControlsOpen ? "border-b" : ""
+        )}>
           <div className="flex justify-between items-center">
-            <CardTitle className="text-xl font-serif">Bible Reader</CardTitle>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => navigateChapter('prev')}
-                disabled={loading}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                <span className="sr-only">Previous Chapter</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => navigateChapter('next')}
-                disabled={loading}
-              >
-                <ChevronRight className="h-4 w-4" />
-                <span className="sr-only">Next Chapter</span>
-              </Button>
+            <div className="flex items-center gap-3">
+              <h2 className={cn(
+                "text-xl font-serif font-medium transition-all",
+                isDarkTheme ? "text-white" : "text-bible-blue",
+                isImmersiveMode ? "text-2xl" : ""
+              )}>
+                {reference}
+              </h2>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant={isDarkTheme ? "outline" : "ghost"} 
+                      size="sm" 
+                      onClick={() => navigateChapter('prev')}
+                      disabled={loading}
+                      className={cn(
+                        isDarkTheme ? "border-white/20 hover:bg-white/10" : "",
+                        "transition-transform hover:scale-105"
+                      )}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      <span className="sr-only">Previous Chapter</span>
+                    </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Previous Chapter</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              
+              <CollapsibleTrigger asChild onClick={() => setIsControlsOpen(!isControlsOpen)}>
+                <Button 
+                  variant={isDarkTheme ? "outline" : "ghost"} 
+                  size="sm" 
+                  className={cn(
+                    isDarkTheme ? "border-white/20 hover:bg-white/10" : "",
+                    "transition-transform hover:scale-105"
+                  )}
+                >
+                  <ChevronDown className={cn(
+                    "h-4 w-4 transition-transform",
+                    isControlsOpen ? "" : "-rotate-180"
+                  )} />
+                  <span className="sr-only">Toggle Controls</span>
+                </Button>
+              </CollapsibleTrigger>
+              
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant={isDarkTheme ? "outline" : "ghost"} 
+                      size="sm" 
+                      onClick={() => navigateChapter('next')}
+                      disabled={loading}
+                      className={cn(
+                        isDarkTheme ? "border-white/20 hover:bg-white/10" : "",
+                        "transition-transform hover:scale-105"
+                      )}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                      <span className="sr-only">Next Chapter</span>
+                    </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Next Chapter</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="mb-6">
-            <Select 
-              value={selectedVersion} 
-              onValueChange={handleVersionChange}
-            >
-              <SelectTrigger className="w-full mb-4">
-                <SelectValue placeholder="Select Bible Version" />
-              </SelectTrigger>
-              <SelectContent>
-                {bibleVersions.map((version) => (
-                  <SelectItem key={version.id} value={version.id}>
-                    {version.name} ({version.abbreviation})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <form onSubmit={handleSearchSubmit} className="flex gap-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 flex-1">
+        
+        <Collapsible open={isControlsOpen}>
+          <CollapsibleContent>
+            <CardContent className={cn(
+              "py-6 px-6 transition-all",
+              isDarkTheme ? "bg-bible-darkblue/80" : "bg-white"
+            )}>
+              <div className="mb-6 space-y-4">
                 <Select 
-                  value={selectedBook} 
-                  onValueChange={handleBookChange}
+                  value={selectedVersion} 
+                  onValueChange={handleVersionChange}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Book" />
+                  <SelectTrigger className={cn(
+                    "w-full",
+                    isDarkTheme ? "border-white/20 bg-white/5 text-white" : ""
+                  )}>
+                    <SelectValue placeholder="Select Bible Version" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {availableBooks.map((book) => (
-                      <SelectItem key={book} value={book}>
-                        {book}
+                  <SelectContent className={cn(
+                    isDarkTheme ? "bg-bible-darkblue border-white/10 text-white" : ""
+                  )}>
+                    {bibleVersions.map((version) => (
+                      <SelectItem key={version.id} value={version.id}>
+                        {version.name} ({version.abbreviation})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                
-                <Select 
-                  value={selectedChapter?.toString() || ""} 
-                  onValueChange={handleChapterChange}
-                  disabled={!selectedBook || availableChapters.length === 0}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Chapter" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableChapters.map((chapter) => (
-                      <SelectItem key={chapter} value={chapter.toString()}>
-                        {chapter}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Reference (e.g., John 3:16)"
-                    value={inputReference}
-                    onChange={(e) => setInputReference(e.target.value)}
-                  />
-                  <Button type="submit" disabled={loading}>
-                    Go
-                  </Button>
-                </div>
-              </div>
-            </form>
-          </div>
 
-          <div>
-            <h2 className="text-lg font-serif font-medium mb-4">
-              {reference}
-            </h2>
-            
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-bible-blue" />
-              </div>
-            ) : verses.length === 0 ? (
-              <div className="text-center py-8">
-                <Book className="mx-auto h-12 w-12 text-gray-300" />
-                <p className="mt-2 text-gray-500">No verses found. Try a different reference.</p>
-              </div>
-            ) : (
-              <div className="space-y-2 bible-text">
-                {verses.map((verse) => (
-                  <div key={`${verse.chapter}-${verse.verse}`} className="group flex">
-                    <div className="flex items-start w-full">
-                      <span className="text-sm font-medium text-gray-500 w-7 pt-0.5 text-right mr-2 flex-shrink-0">
-                        {verse.verse}
-                      </span>
-                      <p className="flex-1">
-                        {verse.text}
-                      </p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0"
-                        onClick={() => handleSaveHighlight(verse.verse)}
+                <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1">
+                    <Select 
+                      value={selectedBook} 
+                      onValueChange={handleBookChange}
+                    >
+                      <SelectTrigger className={cn(
+                        isDarkTheme ? "border-white/20 bg-white/5 text-white" : ""
+                      )}>
+                        <SelectValue placeholder="Select Book" />
+                      </SelectTrigger>
+                      <SelectContent className={cn(
+                        isDarkTheme ? "bg-bible-darkblue border-white/10 text-white" : ""
+                      )}>
+                        {availableBooks.map((book) => (
+                          <SelectItem key={book} value={book}>
+                            {book}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    <Select 
+                      value={selectedChapter?.toString() || ""} 
+                      onValueChange={handleChapterChange}
+                      disabled={!selectedBook || availableChapters.length === 0}
+                    >
+                      <SelectTrigger className={cn(
+                        isDarkTheme ? "border-white/20 bg-white/5 text-white" : ""
+                      )}>
+                        <SelectValue placeholder="Chapter" />
+                      </SelectTrigger>
+                      <SelectContent className={cn(
+                        "max-h-[200px]",
+                        isDarkTheme ? "bg-bible-darkblue border-white/10 text-white" : ""
+                      )}>
+                        {availableChapters.map((chapter) => (
+                          <SelectItem key={chapter} value={chapter.toString()}>
+                            {chapter}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Search className={cn(
+                          "absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4",
+                          isDarkTheme ? "text-white/50" : "text-gray-400"
+                        )} />
+                        <Input
+                          placeholder="Reference (e.g., John 3:16)"
+                          value={inputReference}
+                          onChange={(e) => setInputReference(e.target.value)}
+                          className={cn(
+                            "pl-10",
+                            isDarkTheme ? "border-white/20 bg-white/5 text-white placeholder:text-white/50" : ""
+                          )}
+                        />
+                      </div>
+                      <Button 
+                        type="submit" 
+                        disabled={loading}
+                        variant={isDarkTheme ? "outline" : "default"}
+                        className={cn(
+                          isDarkTheme ? "border-white/20 hover:bg-white/10 text-white" : ""
+                        )}
                       >
-                        <Bookmark className="h-4 w-4" />
-                        <span className="sr-only">Highlight verse</span>
+                        <ArrowRight className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-                ))}
+                </form>
               </div>
-            )}
-          </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+
+        <CardContent className={cn(
+          "bible-text-container transition-all",
+          isDarkTheme ? "bg-bible-darkblue/90" : "",
+          !isControlsOpen ? "pt-0" : ""
+        )}>
+          {loading ? (
+            <div className="flex justify-center py-12 animate-pulse">
+              <Loader2 className={cn(
+                "h-8 w-8 animate-spin",
+                isDarkTheme ? "text-white/70" : "text-bible-blue/70"
+              )} />
+            </div>
+          ) : verses.length === 0 ? (
+            <div className="text-center py-12 animate-fade-in">
+              <Book className={cn(
+                "mx-auto h-16 w-16 mb-4", 
+                isDarkTheme ? "text-white/30" : "text-gray-300"
+              )} />
+              <p className={cn(
+                "mt-2 text-lg font-serif",
+                isDarkTheme ? "text-white/70" : "text-gray-500"
+              )}>
+                No verses found. Try a different reference.
+              </p>
+            </div>
+          ) : (
+            <div className={cn(
+              "space-y-2 bible-reader-content",
+              isDarkTheme ? "text-white/90" : ""
+            )}>
+              {verses.map((verse, index) => (
+                <div 
+                  key={`${verse.chapter}-${verse.verse}`} 
+                  className={cn(
+                    "group bible-verse px-2 animate-fade-in",
+                    { "animate-slide-up": !isImmersiveMode },
+                    isDarkTheme ? "bible-verse-dark" : "",
+                    isImmersiveMode ? "text-lg" : ""
+                  )}
+                  style={{ animationDelay: `${index * 30}ms` }}
+                >
+                  <span className={cn(
+                    "verse-num",
+                    isDarkTheme ? "text-white/50" : "text-gray-500"
+                  )}>
+                    {verse.verse}
+                  </span>
+                  <p className="verse-text">
+                    {verse.text}
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "verse-highlight-btn ml-2 flex-shrink-0",
+                      isDarkTheme ? "hover:bg-white/10 text-white/70" : ""
+                    )}
+                    onClick={() => handleSaveHighlight(verse.verse)}
+                  >
+                    <Bookmark className="h-4 w-4" />
+                    <span className="sr-only">Highlight verse</span>
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
