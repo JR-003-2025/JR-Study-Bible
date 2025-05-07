@@ -28,13 +28,19 @@ const BibleReaderPage = () => {
 
   const toggleTheme = () => {
     setIsDarkTheme(!isDarkTheme);
+    // Apply dark mode to the body when dark theme is active
+    if (!isDarkTheme) {
+      document.body.classList.add('dark-theme');
+    } else {
+      document.body.classList.remove('dark-theme');
+    }
   };
 
   return (
     <Layout>
       <div 
         className={cn(
-          "transition-all duration-300 ease-in-out",
+          "transition-all duration-300 ease-in-out min-h-[80vh]",
           isDarkTheme ? "bg-bible-darkblue text-white" : "bg-white text-bible-darkblue",
           isImmersiveMode ? "px-0 -mx-6" : "mx-auto max-w-4xl"
         )}

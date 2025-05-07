@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -204,7 +205,7 @@ export function BibleReader({
       <Card className={cn(
         "overflow-hidden transition-all duration-300 border",
         isDarkTheme 
-          ? "bg-bible-darkblue/95 border-white/10 text-white" 
+          ? "bg-bible-darkblue/95 border-white/10 text-white shadow-lg" 
           : "bg-white"
       )}>
         <CardHeader className={cn(
@@ -233,7 +234,7 @@ export function BibleReader({
                       onClick={() => navigateChapter('prev')}
                       disabled={loading}
                       className={cn(
-                        isDarkTheme ? "border-white/20 hover:bg-white/10" : "",
+                        isDarkTheme ? "border-white/20 hover:bg-white/10 text-white" : "",
                         "transition-transform hover:scale-105"
                       )}
                     >
@@ -253,7 +254,7 @@ export function BibleReader({
                     variant={isDarkTheme ? "outline" : "ghost"} 
                     size="sm" 
                     className={cn(
-                      isDarkTheme ? "border-white/20 hover:bg-white/10" : "",
+                      isDarkTheme ? "border-white/20 hover:bg-white/10 text-white" : "",
                       "transition-transform hover:scale-105"
                     )}
                   >
@@ -264,30 +265,30 @@ export function BibleReader({
                     <span className="sr-only">Toggle Controls</span>
                   </Button>
                 </CollapsibleTrigger>
-                
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        variant={isDarkTheme ? "outline" : "ghost"} 
-                        size="sm" 
-                        onClick={() => navigateChapter('next')}
-                        disabled={loading}
-                        className={cn(
-                          isDarkTheme ? "border-white/20 hover:bg-white/10" : "",
-                          "transition-transform hover:scale-105"
-                        )}
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                        <span className="sr-only">Next Chapter</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Next Chapter</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
               </Collapsible>
+              
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant={isDarkTheme ? "outline" : "ghost"} 
+                      size="sm" 
+                      onClick={() => navigateChapter('next')}
+                      disabled={loading}
+                      className={cn(
+                        isDarkTheme ? "border-white/20 hover:bg-white/10 text-white" : "",
+                        "transition-transform hover:scale-105"
+                      )}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                      <span className="sr-only">Next Chapter</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Next Chapter</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         </CardHeader>

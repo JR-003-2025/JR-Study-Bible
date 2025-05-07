@@ -87,6 +87,11 @@
     @apply bg-background text-foreground;
   }
 
+  body.dark-theme {
+    background-color: hsl(222 47% 7%);
+    color: hsl(210 40% 98%);
+  }
+
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif;
   }
@@ -207,4 +212,20 @@
 
 .immersive-mode:hover .bible-navigation {
   opacity: 1;
+}
+
+/* Dark theme specific improvements */
+body.dark-theme header {
+  background-color: hsl(222 47% 9%);
+  border-bottom: 1px solid hsla(0, 0%, 100%, 0.1);
+}
+
+body.dark-theme footer {
+  background-color: hsl(222 47% 9%);
+  border-top: 1px solid hsla(0, 0%, 100%, 0.1);
+}
+
+body.dark-theme .card {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 
+              0 4px 6px -4px rgba(0, 0, 0, 0.2);
 }

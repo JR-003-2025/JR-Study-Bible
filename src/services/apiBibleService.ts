@@ -58,6 +58,7 @@ const fetchFromApi = async (endpoint: string): Promise<any> => {
   }
 
   try {
+    console.log(`Fetching from API: ${API_URL}${endpoint}`);
     const response = await fetch(`${API_URL}${endpoint}`, {
       headers: {
         "api-key": API_KEY,
@@ -164,37 +165,73 @@ const parseVersesFromHTML = (htmlContent: string, bookName: string, chapter: num
   return verses;
 };
 
+// Get the correct book ID for API.Bible
+const getBookId = async (bookName: string, versionId: string): Promise<string | null> => {
+  try {
+    const booksResponse = await fetchFromApi(`/bibles/${versionId}/books`);
+    const books = (booksResponse as ApiBibleBooksResponse).data;
+    
+    // First try exact match
+    const exactMatch = books.find(b => b.name.toLowerCase() === bookName.toLowerCase());
+    if (exactMatch) return exactMatch.id;
+    
+    // Try abbreviation match
+    const abbrMatch = books.find(b => b.abbreviation.toLowerCase() === bookName.toLowerCase());
+    if (abbrMatch) return abbrMatch.id;
+    
+    // Try partial match
+    const partialMatch = books.find(b => 
+      b.name.toLowerCase().includes(bookName.toLowerCase()) || 
+      bookName.toLowerCase().includes(b.abbreviation.toLowerCase())
+    );
+    if (partialMatch) return partialMatch.id;
+    
+    return null;
+  } catch (error) {
+    console.error("Error finding book ID:", error);
+    return null;
+  }
+};
+
 // Get a Bible passage by reference
 export const fetchPassageFromApi = async (
   reference: string,
   versionId: string = DEFAULT_BIBLE_VERSION
 ): Promise<BiblePassageResponse> => {
   try {
-    // Handle special case for whole chapters
-    const isWholeChapter = !reference.includes(":");
-    let formattedRef = reference;
-    
-    // Format reference for API.Bible
-    if (isWholeChapter) {
-      // If just a chapter reference, we need to get all verses
-      const [book, chapter] = reference.split(" ");
-      if (book && chapter) {
-        formattedRef = `${book} ${chapter}`;
-      }
+    // Parse the reference parts
+    const parts = reference.split(" ");
+    if (parts.length < 2) {
+      throw new Error("Invalid reference format. Expected 'Book Chapter:Verse'");
     }
     
-    // Create a clean API-friendly reference
-    const apiRef = encodeURIComponent(formattedRef);
+    // Extract book name and chapter/verse information
+    const chapterVersePart = parts[parts.length - 1];
+    const bookName = parts.slice(0, parts.length - 1).join(" ");
     
-    // Fetch passage
-    const response = await fetchFromApi(`/bibles/${versionId}/passages/${apiRef}?content-type=html&include-notes=false`);
+    // Find the book ID
+    const bookId = await getBookId(bookName, versionId);
+    if (!bookId) {
+      throw new Error(`Book "${bookName}" not found`);
+    }
+    
+    // Check if it's a whole chapter or specific verses
+    let endpoint;
+    if (chapterVersePart.includes(":")) {
+      // It's a specific verse or range - use the verses endpoint
+      const [chapter, verseRange] = chapterVersePart.split(":");
+      endpoint = `/bibles/${versionId}/verses/${bookId}.${chapter}.${verseRange}?content-type=html&include-notes=false`;
+    } else {
+      // It's a whole chapter - use the chapters endpoint
+      endpoint = `/bibles/${versionId}/chapters/${bookId}.${chapterVersePart}?content-type=html&include-notes=false`;
+    }
+    
+    console.log(`Fetching passage with endpoint: ${endpoint}`);
+    const response = await fetchFromApi(endpoint);
+    
+    // For verse-specific requests, we need to adjust the parsing
     const passageData = response.data;
-    
-    // Parse book and chapter from reference
-    const refParts = formattedRef.split(" ");
-    const chapterPart = refParts[refParts.length - 1].split(":")[0];
-    const chapter = parseInt(chapterPart, 10);
-    const bookName = refParts.slice(0, -1).join(" ");
+    const chapter = parseInt(chapterVersePart.split(":")[0], 10);
     
     // Parse verses from HTML content
     const verses = parseVersesFromHTML(passageData.content, bookName, chapter);
