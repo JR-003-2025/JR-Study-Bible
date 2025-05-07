@@ -4,8 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BibleVerse, fetchBiblePassage, getAvailableBooks, getAvailableChapters } from "@/services/bibleService";
-import { ChevronLeft, ChevronRight, Bookmark, Book } from "lucide-react";
+import { 
+  BibleVerse, 
+  fetchBiblePassage, 
+  getAvailableBooks, 
+  getAvailableChapters,
+  getAvailableVersions,
+  BibleVersion
+} from "@/services/bibleService";
+import { DEFAULT_BIBLE_VERSION } from "@/services/apiBibleService";
+import { ChevronLeft, ChevronRight, Bookmark, Book, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 type BibleReaderProps = {
@@ -17,15 +25,48 @@ export function BibleReader({ initialReference = "John 3:16" }: BibleReaderProps
   const [inputReference, setInputReference] = useState<string>(initialReference);
   const [verses, setVerses] = useState<BibleVerse[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [availableBooks] = useState<string[]>(getAvailableBooks());
+  const [initialLoading, setInitialLoading] = useState<boolean>(true);
+  const [availableBooks, setAvailableBooks] = useState<string[]>([]);
   const [selectedBook, setSelectedBook] = useState<string>("");
   const [availableChapters, setAvailableChapters] = useState<number[]>([]);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+  const [bibleVersions, setBibleVersions] = useState<BibleVersion[]>([]);
+  const [selectedVersion, setSelectedVersion] = useState<string>(DEFAULT_BIBLE_VERSION);
+
+  // Load available Bible versions
+  useEffect(() => {
+    const loadVersions = async () => {
+      try {
+        const versions = await getAvailableVersions();
+        setBibleVersions(versions);
+      } catch (error) {
+        console.error("Failed to load Bible versions:", error);
+      }
+    };
+    
+    loadVersions();
+  }, []);
+
+  // Load available books when version changes
+  useEffect(() => {
+    const loadBooks = async () => {
+      try {
+        const books = await getAvailableBooks(selectedVersion);
+        setAvailableBooks(books);
+      } catch (error) {
+        console.error("Failed to load books:", error);
+      }
+    };
+    
+    if (selectedVersion) {
+      loadBooks();
+    }
+  }, [selectedVersion]);
 
   const loadPassage = async (ref: string) => {
     setLoading(true);
     try {
-      const response = await fetchBiblePassage(ref);
+      const response = await fetchBiblePassage(ref, selectedVersion);
       if (response.error) {
         toast.error("Error loading passage", { description: response.error });
         return;
@@ -39,12 +80,16 @@ export function BibleReader({ initialReference = "John 3:16" }: BibleReaderProps
         const firstVerse = response.passage[0];
         setSelectedBook(firstVerse.book_name);
         setSelectedChapter(firstVerse.chapter);
-        setAvailableChapters(getAvailableChapters(firstVerse.book_name));
+        
+        // Load available chapters for this book
+        const chapters = await getAvailableChapters(firstVerse.book_name, selectedVersion);
+        setAvailableChapters(chapters);
       }
     } catch (error) {
       console.error("Failed to load passage:", error);
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
   };
 
@@ -52,18 +97,25 @@ export function BibleReader({ initialReference = "John 3:16" }: BibleReaderProps
     if (initialReference) {
       loadPassage(initialReference);
     }
-  }, [initialReference]);
+  }, [initialReference, selectedVersion]);
 
-  const handleBookChange = (book: string) => {
+  const handleBookChange = async (book: string) => {
     setSelectedBook(book);
-    const chapters = getAvailableChapters(book);
-    setAvailableChapters(chapters);
-    setSelectedChapter(chapters.length > 0 ? chapters[0] : null);
+    setLoading(true);
     
-    if (chapters.length > 0) {
-      const newRef = `${book} ${chapters[0]}`;
-      setInputReference(newRef);
-      loadPassage(newRef);
+    try {
+      const chapters = await getAvailableChapters(book, selectedVersion);
+      setAvailableChapters(chapters);
+      
+      if (chapters.length > 0) {
+        setSelectedChapter(chapters[0]);
+        const newRef = `${book} ${chapters[0]}`;
+        setInputReference(newRef);
+        loadPassage(newRef);
+      }
+    } catch (error) {
+      console.error("Failed to load chapters:", error);
+      setLoading(false);
     }
   };
 
@@ -75,12 +127,17 @@ export function BibleReader({ initialReference = "John 3:16" }: BibleReaderProps
     loadPassage(newRef);
   };
 
+  const handleVersionChange = (versionId: string) => {
+    setSelectedVersion(versionId);
+    // This will trigger the useEffect that reloads the passage with the new version
+  };
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     loadPassage(inputReference);
   };
 
-  const navigateChapter = (direction: 'prev' | 'next') => {
+  const navigateChapter = async (direction: 'prev' | 'next') => {
     if (!selectedBook || !selectedChapter || availableChapters.length === 0) return;
     
     const currentIndex = availableChapters.indexOf(selectedChapter);
@@ -105,6 +162,17 @@ export function BibleReader({ initialReference = "John 3:16" }: BibleReaderProps
       description: "This will be saved in your highlights"
     });
   };
+
+  if (initialLoading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-bible-blue" />
+          <p>Loading Bible data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -135,53 +203,71 @@ export function BibleReader({ initialReference = "John 3:16" }: BibleReaderProps
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSearchSubmit} className="flex gap-4 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 flex-1">
-              <Select 
-                value={selectedBook} 
-                onValueChange={handleBookChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Book" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableBooks.map((book) => (
-                    <SelectItem key={book} value={book}>
-                      {book}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Select 
-                value={selectedChapter?.toString() || ""} 
-                onValueChange={handleChapterChange}
-                disabled={!selectedBook || availableChapters.length === 0}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chapter" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableChapters.map((chapter) => (
-                    <SelectItem key={chapter} value={chapter.toString()}>
-                      {chapter}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Reference (e.g., John 3:16)"
-                  value={inputReference}
-                  onChange={(e) => setInputReference(e.target.value)}
-                />
-                <Button type="submit" disabled={loading}>
-                  Go
-                </Button>
+          <div className="mb-6">
+            <Select 
+              value={selectedVersion} 
+              onValueChange={handleVersionChange}
+            >
+              <SelectTrigger className="w-full mb-4">
+                <SelectValue placeholder="Select Bible Version" />
+              </SelectTrigger>
+              <SelectContent>
+                {bibleVersions.map((version) => (
+                  <SelectItem key={version.id} value={version.id}>
+                    {version.name} ({version.abbreviation})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <form onSubmit={handleSearchSubmit} className="flex gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 flex-1">
+                <Select 
+                  value={selectedBook} 
+                  onValueChange={handleBookChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Book" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableBooks.map((book) => (
+                      <SelectItem key={book} value={book}>
+                        {book}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Select 
+                  value={selectedChapter?.toString() || ""} 
+                  onValueChange={handleChapterChange}
+                  disabled={!selectedBook || availableChapters.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chapter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableChapters.map((chapter) => (
+                      <SelectItem key={chapter} value={chapter.toString()}>
+                        {chapter}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Reference (e.g., John 3:16)"
+                    value={inputReference}
+                    onChange={(e) => setInputReference(e.target.value)}
+                  />
+                  <Button type="submit" disabled={loading}>
+                    Go
+                  </Button>
+                </div>
               </div>
-            </div>
-          </form>
+            </form>
+          </div>
 
           <div>
             <h2 className="text-lg font-serif font-medium mb-4">
@@ -190,7 +276,7 @@ export function BibleReader({ initialReference = "John 3:16" }: BibleReaderProps
             
             {loading ? (
               <div className="flex justify-center py-8">
-                <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+                <Loader2 className="h-6 w-6 animate-spin text-bible-blue" />
               </div>
             ) : verses.length === 0 ? (
               <div className="text-center py-8">
@@ -201,8 +287,8 @@ export function BibleReader({ initialReference = "John 3:16" }: BibleReaderProps
               <div className="space-y-2 bible-text">
                 {verses.map((verse) => (
                   <div key={`${verse.chapter}-${verse.verse}`} className="group flex">
-                    <div className="flex items-start">
-                      <span className="text-sm font-medium text-gray-500 w-7 pt-0.5 text-right mr-2">
+                    <div className="flex items-start w-full">
+                      <span className="text-sm font-medium text-gray-500 w-7 pt-0.5 text-right mr-2 flex-shrink-0">
                         {verse.verse}
                       </span>
                       <p className="flex-1">
@@ -211,7 +297,7 @@ export function BibleReader({ initialReference = "John 3:16" }: BibleReaderProps
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity ml-2"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0"
                         onClick={() => handleSaveHighlight(verse.verse)}
                       >
                         <Bookmark className="h-4 w-4" />
