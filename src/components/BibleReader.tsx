@@ -20,7 +20,8 @@ import {
   Book, 
   Loader2,
   Search,
-  ArrowRight
+  ArrowRight,
+  ChevronDown
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
