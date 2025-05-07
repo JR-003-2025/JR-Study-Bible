@@ -239,7 +239,8 @@ export function BibleReader({
                     >
                       <ChevronLeft className="h-4 w-4" />
                       <span className="sr-only">Previous Chapter</span>
-                    </TooltipTrigger>
+                    </Button>
+                  </TooltipTrigger>
                   <TooltipContent>
                     <p>Previous Chapter</p>
                   </TooltipContent>
@@ -278,7 +279,8 @@ export function BibleReader({
                     >
                       <ChevronRight className="h-4 w-4" />
                       <span className="sr-only">Next Chapter</span>
-                    </TooltipTrigger>
+                    </Button>
+                  </TooltipTrigger>
                   <TooltipContent>
                     <p>Next Chapter</p>
                   </TooltipContent>
