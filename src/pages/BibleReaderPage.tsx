@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { BibleReader } from "@/components/BibleReader";
@@ -31,10 +31,27 @@ const BibleReaderPage = () => {
     // Apply dark mode to the body when dark theme is active
     if (!isDarkTheme) {
       document.body.classList.add('dark-theme');
+      document.documentElement.classList.add('dark-mode');
     } else {
       document.body.classList.remove('dark-theme');
+      document.documentElement.classList.remove('dark-mode');
     }
   };
+
+  // Set up theme class on mount and cleanup on unmount
+  useEffect(() => {
+    // Apply the initial theme class
+    if (isDarkTheme) {
+      document.body.classList.add('dark-theme');
+      document.documentElement.classList.add('dark-mode');
+    }
+    
+    // Cleanup function
+    return () => {
+      document.body.classList.remove('dark-theme');
+      document.documentElement.classList.remove('dark-mode');
+    };
+  }, []);
 
   return (
     <Layout>

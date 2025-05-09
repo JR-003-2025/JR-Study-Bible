@@ -130,7 +130,11 @@ export const getChaptersForBook = async (
     const chaptersResponse = await fetchFromApi(`/bibles/${versionId}/books/${bookData.id}/chapters`);
     return (chaptersResponse as ApiBibleChaptersResponse).data
       .filter((chapter) => chapter.number !== "intro") // Filter out intro chapters
-      .map((chapter) => parseInt(chapter.number, 10));
+      .map((chapter) => {
+        const chapterNum = parseInt(chapter.number, 10);
+        return isNaN(chapterNum) ? 0 : chapterNum;  // Ensure we return valid numbers only
+      })
+      .filter(num => num > 0);  // Filter out any zeros that might have come from invalid numbers
   } catch (error) {
     console.error(`Error fetching chapters for ${book}:`, error);
     return [];
@@ -217,23 +221,34 @@ export const fetchPassageFromApi = async (
     
     // Check if it's a whole chapter or specific verses
     let endpoint;
+    let chapter: number;
+    
     if (chapterVersePart.includes(":")) {
       // It's a specific verse or range - use the verses endpoint
-      const [chapter, verseRange] = chapterVersePart.split(":");
+      const [chapterStr, verseRange] = chapterVersePart.split(":");
+      chapter = parseInt(chapterStr, 10);
+      
+      if (isNaN(chapter)) {
+        throw new Error(`Invalid chapter number: ${chapterStr}`);
+      }
+      
       endpoint = `/bibles/${versionId}/verses/${bookId}.${chapter}.${verseRange}?content-type=html&include-notes=false`;
     } else {
       // It's a whole chapter - use the chapters endpoint
-      endpoint = `/bibles/${versionId}/chapters/${bookId}.${chapterVersePart}?content-type=html&include-notes=false`;
+      chapter = parseInt(chapterVersePart, 10);
+      
+      if (isNaN(chapter)) {
+        throw new Error(`Invalid chapter number: ${chapterVersePart}`);
+      }
+      
+      endpoint = `/bibles/${versionId}/chapters/${bookId}.${chapter}?content-type=html&include-notes=false`;
     }
     
     console.log(`Fetching passage with endpoint: ${endpoint}`);
     const response = await fetchFromApi(endpoint);
     
-    // For verse-specific requests, we need to adjust the parsing
-    const passageData = response.data;
-    const chapter = parseInt(chapterVersePart.split(":")[0], 10);
-    
     // Parse verses from HTML content
+    const passageData = response.data;
     const verses = parseVersesFromHTML(passageData.content, bookName, chapter);
     
     return {
