@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@300;400;700;900&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 
 @tailwind base;
@@ -35,7 +34,7 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221 83% 53%;
 
-    --radius: 0.5rem;
+    --radius: 1rem;
 
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
@@ -84,7 +83,7 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
   }
 
   body.dark-theme {
@@ -93,7 +92,7 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-serif;
+    @apply font-serif tracking-tight;
   }
 
   p, span, div, button, a {
@@ -102,90 +101,99 @@
 }
 
 @layer components {
-  .scripture-block {
-    @apply bg-scripture text-scripture-foreground border border-scripture-border p-4 rounded-md my-4 font-serif;
-  }
-  
   .tool-card {
-    @apply border bg-card p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow hover:border-primary/30 transform hover:-translate-y-1 transition-all duration-200;
+    @apply relative overflow-hidden border bg-card p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1;
+    @apply before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/5 before:to-transparent before:opacity-0 hover:before:opacity-100 before:transition-opacity;
+  }
+
+  .scripture-block {
+    @apply bg-scripture text-scripture-foreground border border-scripture-border p-6 rounded-xl my-6 font-serif leading-relaxed;
   }
 
   .scripture-reference {
-    @apply text-bible-blue font-medium;
+    @apply text-bible-blue font-medium inline-flex items-center gap-1;
   }
-  
+
   .bible-text-container {
-    @apply py-8 px-4 transition-all duration-300;
+    @apply py-8 px-6 transition-all duration-300;
   }
-  
+
   .bible-verse {
-    @apply flex items-start w-full py-1 transition-all duration-200 hover:bg-bible-cream/30 rounded;
+    @apply flex items-start w-full py-2 px-4 transition-all duration-200 hover:bg-bible-cream/30 rounded-lg group;
   }
-  
+
   .bible-verse-dark {
-    @apply hover:bg-white/10;
+    @apply hover:bg-white/5;
   }
-  
+
   .verse-num {
-    @apply text-sm font-medium w-7 pt-0.5 text-right mr-3 flex-shrink-0 transition-colors;
+    @apply text-sm font-medium w-8 pt-0.5 text-right mr-4 flex-shrink-0 transition-colors opacity-60 group-hover:opacity-100;
   }
-  
+
   .verse-text {
-    @apply flex-1 leading-relaxed;
+    @apply flex-1 leading-relaxed text-lg;
   }
-  
+
   .verse-highlight-btn {
     @apply opacity-0 group-hover:opacity-100 transition-opacity;
   }
-  
-  .bible-navigation {
-    @apply flex justify-between items-center -mx-1 px-1 py-2 sticky top-0 transition-all duration-300 backdrop-blur-sm z-10;
-  }
-  
-  .glassmorphism {
-    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-sm;
-  }
-  
-  .glassmorphism-dark {
-    @apply bg-bible-darkblue/80 backdrop-blur-md border border-white/10 shadow-md;
-  }
-  
-  .fade-in {
-    @apply animate-fade-in;
-  }
-}
 
-@layer keyframes {
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  .bible-navigation {
+    @apply flex justify-between items-center sticky top-0 transition-all duration-300 backdrop-blur-lg z-10 py-4 px-6 rounded-t-2xl;
   }
-  
-  @keyframes slide-up {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+
+  .glassmorphism {
+    @apply bg-white/90 backdrop-blur-xl border border-white/20 shadow-lg;
+  }
+
+  .glassmorphism-dark {
+    @apply bg-bible-darkblue/90 backdrop-blur-xl border border-white/10 shadow-xl;
+  }
+
+  .nav-link {
+    @apply relative px-3 py-2 text-sm font-medium rounded-lg transition-colors;
+    @apply before:absolute before:inset-0 before:bg-current before:opacity-0 before:transition-opacity hover:before:opacity-10;
+  }
+
+  .button-glow {
+    @apply relative overflow-hidden;
+    @apply after:absolute after:inset-0 after:bg-gradient-to-r after:from-primary/20 after:to-transparent after:opacity-0 hover:after:opacity-100 after:transition-opacity;
   }
 }
 
 @layer utilities {
   .animate-fade-in {
-    animation: fade-in 0.3s ease-out forwards;
+    animation: fade-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
   
   .animate-slide-up {
-    animation: slide-up 0.4s ease-out forwards;
+    animation: slide-up 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -198,6 +206,10 @@
   line-height: 1.8;
 }
 
+.bible-reader-controls {
+  @apply transition-all duration-300;
+}
+
 .bible-reader-controls .select-trigger {
   @apply transition-all duration-200;
 }
@@ -207,25 +219,50 @@
 }
 
 .immersive-mode .bible-navigation {
-  opacity: 0.6;
+  @apply opacity-0 hover:opacity-100 transition-opacity;
 }
 
-.immersive-mode:hover .bible-navigation {
-  opacity: 1;
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .bible-verse {
+    @apply py-3 px-3;
+  }
+
+  .verse-num {
+    @apply w-6 mr-2 text-xs;
+  }
+
+  .verse-text {
+    @apply text-base;
+  }
+
+  .bible-navigation {
+    @apply px-4 py-3;
+  }
+
+  .tool-card {
+    @apply p-4;
+  }
 }
 
-/* Dark theme specific improvements */
-body.dark-theme header {
-  background-color: hsl(222 47% 9%);
-  border-bottom: 1px solid hsla(0, 0%, 100%, 0.1);
+/* Dark theme improvements */
+.dark-theme {
+  @apply selection:bg-primary/30 selection:text-white;
 }
 
-body.dark-theme footer {
-  background-color: hsl(222 47% 9%);
-  border-top: 1px solid hsla(0, 0%, 100%, 0.1);
+.dark-theme .tool-card {
+  @apply hover:border-primary/30;
+  @apply before:from-primary/10;
 }
 
-body.dark-theme .card {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 
-              0 4px 6px -4px rgba(0, 0, 0, 0.2);
+.dark-theme .button-glow {
+  @apply after:from-primary/30;
+}
+
+.dark-theme header {
+  @apply bg-bible-darkblue/95 backdrop-blur-lg border-b border-white/5;
+}
+
+.dark-theme footer {
+  @apply bg-bible-darkblue/95 backdrop-blur-lg border-t border-white/5;
 }
