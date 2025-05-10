@@ -1,0 +1,107 @@
+
+/* Bible Reader Dark Mode */
+.dark-theme {
+  background-color: hsl(222 47% 7%);
+  color: hsl(210 40% 98%);
+}
+
+.dark-theme .bible-navigation {
+  background-color: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(8px);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark-theme .bible-reader-content {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dark-theme .verse-num {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dark-theme .bible-verse:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.dark-theme .verse-highlight-btn {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dark-theme .verse-highlight-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Bible Reader Styles */
+.bible-reader-content {
+  font-family: 'Merriweather', serif;
+}
+
+.bible-reader-content .verse-text {
+  line-height: 1.8;
+}
+
+.bible-verse {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  transition: all 0.2s;
+  border-radius: 0.5rem;
+}
+
+.bible-verse:hover {
+  background-color: rgba(248, 244, 227, 0.3);
+}
+
+.verse-num {
+  font-size: 0.875rem;
+  font-weight: 500;
+  width: 2rem;
+  padding-top: 0.125rem;
+  text-align: right;
+  margin-right: 1rem;
+  flex-shrink: 0;
+  transition: colors;
+  opacity: 0.6;
+}
+
+.verse-text {
+  flex: 1;
+  line-height: 1.75;
+  font-size: 1.125rem;
+}
+
+.verse-highlight-btn {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.bible-verse:hover .verse-highlight-btn {
+  opacity: 1;
+}
+
+.immersive-mode .bible-navigation {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.immersive-mode .bible-navigation:hover {
+  opacity: 1;
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .bible-verse {
+    padding: 0.75rem;
+  }
+
+  .verse-num {
+    width: 1.5rem;
+    margin-right: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .verse-text {
+    font-size: 1rem;
+  }
+}

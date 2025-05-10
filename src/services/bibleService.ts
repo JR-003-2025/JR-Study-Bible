@@ -6,7 +6,7 @@ import {
   getChaptersForBook,
   DEFAULT_BIBLE_VERSION,
   getBibleVersions
-} from "./apiBibleService";
+} from "./wldehBibleService";
 
 // Types for Bible API
 export type BibleVerse = {
@@ -61,7 +61,7 @@ export const parseReference = (reference: string): {
   return { book, chapter, verseStart, verseEnd };
 };
 
-// Fetch Bible passage using API.Bible
+// Fetch Bible passage using Wldeh Bible API
 export const fetchBiblePassage = async (
   reference: string, 
   versionId: string = DEFAULT_BIBLE_VERSION
@@ -81,12 +81,12 @@ export const fetchBiblePassage = async (
   }
 };
 
-// Get available books from API.Bible
+// Get available books
 export const getAvailableBooks = async (versionId: string = DEFAULT_BIBLE_VERSION): Promise<string[]> => {
   return await getBooksForVersion(versionId);
 };
 
-// Get available chapters for a book from API.Bible
+// Get available chapters for a book
 export const getAvailableChapters = async (
   book: string,
   versionId: string = DEFAULT_BIBLE_VERSION

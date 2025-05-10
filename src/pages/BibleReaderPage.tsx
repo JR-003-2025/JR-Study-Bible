@@ -9,11 +9,10 @@ import {
   Sun, 
   Moon, 
   Book, 
-  ChevronDown,
   ChevronRight 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Card, CardContent } from "@/components/ui/card";
+import "../styles/bible-reader.css";
 
 const BibleReaderPage = () => {
   const navigate = useNavigate();
