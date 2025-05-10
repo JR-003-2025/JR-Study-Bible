@@ -214,6 +214,15 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
   try {
     const translations = await getAvailableTranslations();
     
+    // Ensure the translations response is an array
+    if (!Array.isArray(translations)) {
+      console.warn("Translations data is not an array:", translations);
+      return [
+        { id: "eng_kjv", name: "King James Version", abbreviation: "KJV" },
+        { id: "eng_web", name: "World English Bible", abbreviation: "WEB" }
+      ];
+    }
+    
     return translations.map((t: any) => ({
       id: t.id || t.code,
       name: t.name,
