@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   BibleVerse, 
   fetchBiblePassage, 
@@ -12,7 +13,7 @@ import {
   getAvailableVersions,
   BibleVersion
 } from "@/services/bibleService";
-import { DEFAULT_BIBLE_VERSION } from "@/services/wldehBibleService";
+import { DEFAULT_BIBLE_VERSION } from "@/services/bibleApi";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -85,12 +86,15 @@ export function BibleReader({
   const loadPassage = async (ref: string) => {
     setLoading(true);
     try {
+      console.log("Fetching passage:", ref, "version:", selectedVersion);
       const response = await fetchBiblePassage(ref, selectedVersion);
+      
       if (response.error) {
         toast.error("Error loading passage", { description: response.error });
         return;
       }
       
+      console.log("Received passage:", response);
       setVerses(response.passage);
       setReference(response.reference);
       
@@ -265,35 +269,35 @@ export function BibleReader({
                     <span className="sr-only">Toggle Controls</span>
                   </Button>
                 </CollapsibleTrigger>
-                
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        variant={isDarkTheme ? "outline" : "ghost"} 
-                        size="sm" 
-                        onClick={() => navigateChapter('next')}
-                        disabled={loading}
-                        className={cn(
-                          isDarkTheme ? "border-white/20 hover:bg-white/10 text-white" : "",
-                          "transition-transform hover:scale-105"
-                        )}
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                        <span className="sr-only">Next Chapter</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Next Chapter</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
               </Collapsible>
+              
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant={isDarkTheme ? "outline" : "ghost"} 
+                      size="sm" 
+                      onClick={() => navigateChapter('next')}
+                      disabled={loading}
+                      className={cn(
+                        isDarkTheme ? "border-white/20 hover:bg-white/10 text-white" : "",
+                        "transition-transform hover:scale-105"
+                      )}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                      <span className="sr-only">Next Chapter</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Next Chapter</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         </CardHeader>
         
-        <Collapsible open={isControlsOpen} onOpenChange={setIsControlsOpen}>
+        <Collapsible open={isControlsOpen}>
           <CollapsibleContent>
             <CardContent className={cn(
               "py-6 px-6 transition-all",
@@ -425,45 +429,47 @@ export function BibleReader({
               </p>
             </div>
           ) : (
-            <div className={cn(
-              "space-y-2 bible-reader-content",
-              isDarkTheme ? "text-white/90" : ""
-            )}>
-              {verses.map((verse, index) => (
-                <div 
-                  key={`${verse.chapter}-${verse.verse}`} 
-                  className={cn(
-                    "group bible-verse px-2 animate-fade-in",
-                    { "animate-slide-up": !isImmersiveMode },
-                    isDarkTheme ? "bible-verse-dark" : "",
-                    isImmersiveMode ? "text-lg" : ""
-                  )}
-                  style={{ animationDelay: `${index * 30}ms` }}
-                >
-                  <span className={cn(
-                    "verse-num",
-                    isDarkTheme ? "text-white/50" : "text-gray-500"
-                  )}>
-                    {verse.verse}
-                  </span>
-                  <p className="verse-text">
-                    {verse.text}
-                  </p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
+            <ScrollArea className="h-[500px]">
+              <div className={cn(
+                "space-y-2 bible-reader-content",
+                isDarkTheme ? "text-white/90" : ""
+              )}>
+                {verses.map((verse, index) => (
+                  <div 
+                    key={`${verse.chapter}-${verse.verse}`} 
                     className={cn(
-                      "verse-highlight-btn ml-2 flex-shrink-0",
-                      isDarkTheme ? "hover:bg-white/10 text-white/70" : ""
+                      "group bible-verse px-2 animate-fade-in",
+                      { "animate-slide-up": !isImmersiveMode },
+                      isDarkTheme ? "bible-verse-dark" : "",
+                      isImmersiveMode ? "text-lg" : ""
                     )}
-                    onClick={() => handleSaveHighlight(verse.verse)}
+                    style={{ animationDelay: `${index * 30}ms` }}
                   >
-                    <Bookmark className="h-4 w-4" />
-                    <span className="sr-only">Highlight verse</span>
-                  </Button>
-                </div>
-              ))}
-            </div>
+                    <span className={cn(
+                      "verse-num",
+                      isDarkTheme ? "text-white/50" : "text-gray-500"
+                    )}>
+                      {verse.verse}
+                    </span>
+                    <p className="verse-text">
+                      {verse.text}
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        "verse-highlight-btn ml-2 flex-shrink-0",
+                        isDarkTheme ? "hover:bg-white/10 text-white/70" : ""
+                      )}
+                      onClick={() => handleSaveHighlight(verse.verse)}
+                    >
+                      <Bookmark className="h-4 w-4" />
+                      <span className="sr-only">Highlight verse</span>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
           )}
         </CardContent>
       </Card>
