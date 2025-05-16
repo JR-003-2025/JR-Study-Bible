@@ -22,7 +22,8 @@ import {
   Loader2,
   Search,
   ArrowRight,
-  ChevronDown
+  ChevronDown,
+  AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -59,20 +60,9 @@ export function BibleReader({
     const loadVersions = async () => {
       try {
         const versions = await getAvailableVersions();
-        if (versions && versions.length > 0) {
-          setBibleVersions(versions);
-        } else {
-          setBibleVersions([
-            { id: "eng_kjv", name: "King James Version", abbreviation: "KJV" },
-            { id: "eng_web", name: "World English Bible", abbreviation: "WEB" }
-          ]);
-        }
+        setBibleVersions(versions);
       } catch (error) {
         console.error("Failed to load Bible versions:", error);
-        setBibleVersions([
-          { id: "eng_kjv", name: "King James Version", abbreviation: "KJV" },
-          { id: "eng_web", name: "World English Bible", abbreviation: "WEB" }
-        ]);
         toast.error("Failed to load Bible versions", { 
           description: "Using default versions instead"
         });
@@ -101,6 +91,7 @@ export function BibleReader({
     }
   }, [selectedVersion]);
 
+  // Load passage
   const loadPassage = async (ref: string) => {
     setLoading(true);
     setLoadError("");
@@ -109,7 +100,6 @@ export function BibleReader({
       const response = await fetchBiblePassage(ref, selectedVersion);
       
       if (response.error) {
-        toast.error("Error loading passage", { description: response.error });
         setLoadError(response.error);
         return;
       }
@@ -135,15 +125,13 @@ export function BibleReader({
     } catch (error) {
       console.error("Failed to load passage:", error);
       setLoadError(error instanceof Error ? error.message : "Unknown error occurred");
-      toast.error("Failed to load Bible passage", {
-        description: "Please check your reference and try again"
-      });
     } finally {
       setLoading(false);
       setInitialLoading(false);
     }
   };
 
+  // Load initial passage
   useEffect(() => {
     if (initialReference) {
       loadPassage(initialReference);
@@ -240,7 +228,7 @@ export function BibleReader({
       <Card className={cn(
         "overflow-hidden transition-all duration-300 border",
         isDarkTheme 
-          ? "bg-bible-darkblue/95 border-white/10 text-white shadow-lg" 
+          ? "bg-bible-darkblue/95 border-white/10 text-white shadow-lg dark-theme" 
           : "bg-white"
       )}>
         <CardHeader className={cn(
@@ -283,7 +271,10 @@ export function BibleReader({
                 </Tooltip>
               </TooltipProvider>
               
-              <Collapsible open={isControlsOpen} onOpenChange={setIsControlsOpen}>
+              <Collapsible 
+                open={isControlsOpen} 
+                onOpenChange={setIsControlsOpen}
+              >
                 <CollapsibleTrigger asChild>
                   <Button 
                     variant={isDarkTheme ? "outline" : "ghost"} 
@@ -300,109 +291,6 @@ export function BibleReader({
                     <span className="sr-only">Toggle Controls</span>
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="transition-all">
-                  <CardContent className={cn(
-                    "py-6 px-6 transition-all",
-                    isDarkTheme ? "bg-bible-darkblue/80" : "bg-white"
-                  )}>
-                    <div className="mb-6 space-y-4">
-                      <Select 
-                        value={selectedVersion} 
-                        onValueChange={handleVersionChange}
-                      >
-                        <SelectTrigger className={cn(
-                          "w-full",
-                          isDarkTheme ? "border-white/20 bg-white/5 text-white" : ""
-                        )}>
-                          <SelectValue placeholder="Select Bible Version" />
-                        </SelectTrigger>
-                        <SelectContent className={cn(
-                          isDarkTheme ? "bg-bible-darkblue border-white/10 text-white" : ""
-                        )}>
-                          {bibleVersions.map((version) => (
-                            <SelectItem key={version.id} value={version.id}>
-                              {version.name} ({version.abbreviation})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                      <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1">
-                          <Select 
-                            value={selectedBook} 
-                            onValueChange={handleBookChange}
-                          >
-                            <SelectTrigger className={cn(
-                              isDarkTheme ? "border-white/20 bg-white/5 text-white" : ""
-                            )}>
-                              <SelectValue placeholder="Select Book" />
-                            </SelectTrigger>
-                            <SelectContent className={cn(
-                              isDarkTheme ? "bg-bible-darkblue border-white/10 text-white" : ""
-                            )}>
-                              {availableBooks.map((book) => (
-                                <SelectItem key={book} value={book}>
-                                  {book}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          
-                          <Select 
-                            value={selectedChapter?.toString() || ""} 
-                            onValueChange={handleChapterChange}
-                            disabled={!selectedBook || availableChapters.length === 0}
-                          >
-                            <SelectTrigger className={cn(
-                              isDarkTheme ? "border-white/20 bg-white/5 text-white" : ""
-                            )}>
-                              <SelectValue placeholder="Chapter" />
-                            </SelectTrigger>
-                            <SelectContent className={cn(
-                              "max-h-[200px]",
-                              isDarkTheme ? "bg-bible-darkblue border-white/10 text-white" : ""
-                            )}>
-                              {availableChapters.map((chapter) => (
-                                <SelectItem key={chapter} value={chapter.toString()}>
-                                  {chapter}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          
-                          <div className="flex gap-2">
-                            <div className="relative flex-1">
-                              <Search className={cn(
-                                "absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4",
-                                isDarkTheme ? "text-white/50" : "text-gray-400"
-                              )} />
-                              <Input
-                                placeholder="Reference (e.g., John 3:16)"
-                                value={inputReference}
-                                onChange={(e) => setInputReference(e.target.value)}
-                                className={cn(
-                                  "pl-10",
-                                  isDarkTheme ? "border-white/20 bg-white/5 text-white placeholder:text-white/50" : ""
-                                )}
-                              />
-                            </div>
-                            <Button 
-                              type="submit" 
-                              disabled={loading}
-                              variant={isDarkTheme ? "outline" : "default"}
-                              className={cn(
-                                isDarkTheme ? "border-white/20 hover:bg-white/10 text-white" : ""
-                              )}
-                            >
-                              <ArrowRight className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </form>
-                    </div>
-                  </CardContent>
-                </CollapsibleContent>
               </Collapsible>
               
               <TooltipProvider>
@@ -429,6 +317,114 @@ export function BibleReader({
               </TooltipProvider>
             </div>
           </div>
+          
+          {/* Controls content - properly placed inside the Collapsible */}
+          <Collapsible open={isControlsOpen} onOpenChange={setIsControlsOpen}>
+            <CollapsibleContent className="transition-all">
+              <CardContent className={cn(
+                "mt-4 py-4 transition-all",
+                isDarkTheme ? "bg-bible-darkblue/80" : "bg-white"
+              )}>
+                <div className="mb-4 space-y-4">
+                  <Select 
+                    value={selectedVersion} 
+                    onValueChange={handleVersionChange}
+                  >
+                    <SelectTrigger className={cn(
+                      "w-full",
+                      isDarkTheme ? "border-white/20 bg-white/5 text-white" : ""
+                    )}>
+                      <SelectValue placeholder="Select Bible Version" />
+                    </SelectTrigger>
+                    <SelectContent className={cn(
+                      isDarkTheme ? "bg-bible-darkblue border-white/10 text-white" : ""
+                    )}>
+                      {bibleVersions.map((version) => (
+                        <SelectItem key={version.id} value={version.id}>
+                          {version.name} ({version.abbreviation})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1">
+                      <Select 
+                        value={selectedBook} 
+                        onValueChange={handleBookChange}
+                      >
+                        <SelectTrigger className={cn(
+                          isDarkTheme ? "border-white/20 bg-white/5 text-white" : ""
+                        )}>
+                          <SelectValue placeholder="Select Book" />
+                        </SelectTrigger>
+                        <SelectContent className={cn(
+                          "max-h-[300px]",
+                          isDarkTheme ? "bg-bible-darkblue border-white/10 text-white" : ""
+                        )}>
+                          {availableBooks.map((book) => (
+                            <SelectItem key={book} value={book}>
+                              {book}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      <Select 
+                        value={selectedChapter?.toString() || ""} 
+                        onValueChange={handleChapterChange}
+                        disabled={!selectedBook || availableChapters.length === 0}
+                      >
+                        <SelectTrigger className={cn(
+                          isDarkTheme ? "border-white/20 bg-white/5 text-white" : ""
+                        )}>
+                          <SelectValue placeholder="Chapter" />
+                        </SelectTrigger>
+                        <SelectContent className={cn(
+                          "max-h-[200px]",
+                          isDarkTheme ? "bg-bible-darkblue border-white/10 text-white" : ""
+                        )}>
+                          {availableChapters.map((chapter) => (
+                            <SelectItem key={chapter} value={chapter.toString()}>
+                              {chapter}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Search className={cn(
+                            "absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4",
+                            isDarkTheme ? "text-white/50" : "text-gray-400"
+                          )} />
+                          <Input
+                            placeholder="Reference (e.g., John 3:16)"
+                            value={inputReference}
+                            onChange={(e) => setInputReference(e.target.value)}
+                            className={cn(
+                              "pl-10",
+                              isDarkTheme ? "border-white/20 bg-white/5 text-white placeholder:text-white/50" : ""
+                            )}
+                          />
+                        </div>
+                        <Button 
+                          type="submit" 
+                          disabled={loading}
+                          variant={isDarkTheme ? "outline" : "default"}
+                          className={cn(
+                            isDarkTheme ? "border-white/20 hover:bg-white/10 text-white" : ""
+                          )}
+                        >
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
         </CardHeader>
         
         <CardContent className={cn(
@@ -445,16 +441,41 @@ export function BibleReader({
             </div>
           ) : verses.length === 0 ? (
             <div className="text-center py-12 animate-fade-in">
-              <Book className={cn(
-                "mx-auto h-16 w-16 mb-4", 
-                isDarkTheme ? "text-white/30" : "text-gray-300"
-              )} />
-              <p className={cn(
-                "mt-2 text-lg font-serif",
-                isDarkTheme ? "text-white/70" : "text-gray-500"
-              )}>
-                {loadError ? `Error: ${loadError}` : "No verses found. Try a different reference."}
-              </p>
+              {loadError ? (
+                <div className="flex flex-col items-center">
+                  <AlertCircle className={cn(
+                    "h-12 w-12 mb-2",
+                    isDarkTheme ? "text-red-400" : "text-red-500"
+                  )} />
+                  <p className={cn(
+                    "mt-2 text-lg font-serif",
+                    isDarkTheme ? "text-white/70" : "text-gray-700"
+                  )}>
+                    {loadError}
+                  </p>
+                  <Button 
+                    onClick={() => loadPassage(inputReference)} 
+                    variant="outline" 
+                    className="mt-4"
+                    size="sm"
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Book className={cn(
+                    "mx-auto h-16 w-16 mb-4", 
+                    isDarkTheme ? "text-white/30" : "text-gray-300"
+                  )} />
+                  <p className={cn(
+                    "mt-2 text-lg font-serif",
+                    isDarkTheme ? "text-white/70" : "text-gray-500"
+                  )}>
+                    No verses found. Try a different reference.
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <ScrollArea className="h-[500px]">

@@ -1,263 +1,58 @@
 
 // src/services/bibleApi.ts
 import { BiblePassageResponse, BibleVerse, BibleVersion } from "./bibleService";
+import { toast } from "sonner";
 
-export const BASE_URL = "https://bible.helloao.org/api";
+export const BASE_URL = "https://api.scripture.api.bible/v1";
+export const API_KEY = "9f59126084a570d8108158ec5ad56802"; // API.Bible key
 
-export async function getAvailableTranslations(): Promise<any[]> {
-  try {
-    const res = await fetch(`${BASE_URL}/available_translations.json`);
-    if (!res.ok) {
-      throw new Error(`API Error: ${res.status} ${res.statusText}`);
-    }
-    const data = await res.json();
-    return Array.isArray(data) ? data : [];
-  } catch (error) {
-    console.error("Failed to fetch translations:", error);
-    return [];
+// Cache for API responses to improve performance
+const cache: Record<string, any> = {};
+
+// Helper to make API requests with caching
+const fetchFromApi = async (endpoint: string): Promise<any> => {
+  if (cache[endpoint]) {
+    return cache[endpoint];
   }
-}
 
-export async function getBooks(translation: string): Promise<any[]> {
   try {
-    const res = await fetch(`${BASE_URL}/${translation}/books.json`);
-    if (!res.ok) {
-      throw new Error(`API Error: ${res.status} ${res.statusText}`);
-    }
-    const data = await res.json();
-    return Array.isArray(data) ? data : [];
-  } catch (error) {
-    console.error(`Failed to fetch books for translation ${translation}:`, error);
-    return [];
-  }
-}
+    console.log(`Fetching from API: ${BASE_URL}${endpoint}`);
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+      headers: {
+        "api-key": API_KEY,
+      },
+    });
 
-export async function getChapter(translation: string, book: string, chapter: number): Promise<any> {
-  try {
-    const res = await fetch(`${BASE_URL}/${translation}/${book}/${chapter}.json`);
-    if (!res.ok) {
-      throw new Error(`API Error: ${res.status} ${res.statusText}`);
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.status} ${response.statusText}`);
     }
-    return await res.json();
-  } catch (error) {
-    console.error(`Failed to fetch chapter ${book} ${chapter}:`, error);
+
+    const data = await response.json();
+    cache[endpoint] = data;
+    return data;
+  } catch (error: any) {
+    console.error("API.Bible Error:", error);
+    // Don't toast from here, let the calling function handle UI notifications
     throw error;
   }
-}
-
-// Helper function to format the API response to match our existing BiblePassageResponse format
-export async function fetchPassageFromNewApi(
-  reference: string,
-  versionId: string = "eng_kjv"
-): Promise<BiblePassageResponse> {
-  try {
-    // Parse the reference to extract book, chapter, and verses
-    const { bookCode, chapter, verseStart, verseEnd } = parseReferenceForNewApi(reference);
-    
-    // Fetch the chapter data
-    const chapterData = await getChapter(versionId, bookCode, chapter);
-    
-    if (!chapterData || !chapterData.verses) {
-      return {
-        passage: [],
-        reference: reference,
-        error: "Failed to load passage: No verses found"
-      };
-    }
-    
-    // Filter verses if specific verses were requested
-    let verses = chapterData.verses;
-    if (verseStart) {
-      if (verseEnd) {
-        // Range of verses
-        verses = verses.filter((v: any) => 
-          v.verse >= verseStart && v.verse <= verseEnd
-        );
-      } else {
-        // Single verse
-        verses = verses.filter((v: any) => v.verse === verseStart);
-      }
-    }
-    
-    if (!verses || verses.length === 0) {
-      return {
-        passage: [],
-        reference: reference,
-        error: `No verses found for ${reference}`
-      };
-    }
-    
-    // Format the verses to match our BibleVerse format
-    const formattedVerses: BibleVerse[] = verses.map((v: any) => ({
-      book_id: bookCode,
-      book_name: chapterData.book_name || bookCode,
-      chapter: chapter,
-      verse: v.verse,
-      text: v.text
-    }));
-    
-    return {
-      passage: formattedVerses,
-      reference: `${chapterData.book_name || bookCode} ${chapter}${verseStart ? `:${verseStart}${verseEnd ? `-${verseEnd}` : ""}` : ""}`
-    };
-  } catch (error) {
-    console.error("Error fetching passage from API:", error);
-    return {
-      passage: [],
-      reference: reference,
-      error: error instanceof Error ? error.message : "Unknown error occurred"
-    };
-  }
-}
-
-// Parse a reference string like "John 3:16" to get the book, chapter, and verse info
-function parseReferenceForNewApi(reference: string): { 
-  bookCode: string; 
-  chapter: number; 
-  verseStart?: number; 
-  verseEnd?: number 
-} {
-  // Extract book name (everything before the first number)
-  const bookMatch = reference.match(/^(\d?\s?[A-Za-z]+)/);
-  let bookName = bookMatch ? bookMatch[0].trim() : "GEN"; // Default to Genesis
-  
-  // Convert book name to book code (short form)
-  const bookCode = convertBookNameToCode(bookName);
-  
-  // Extract chapter and verse references
-  const numberMatch = reference.match(/(\d+)(?::(\d+))?(?:-(\d+))?/);
-  
-  if (!numberMatch) {
-    return { bookCode, chapter: 1 };
-  }
-  
-  const chapter = parseInt(numberMatch[1], 10);
-  const verseStart = numberMatch[2] ? parseInt(numberMatch[2], 10) : undefined;
-  const verseEnd = numberMatch[3] ? parseInt(numberMatch[3], 10) : undefined;
-  
-  return { bookCode, chapter, verseStart, verseEnd };
-}
-
-// Convert common book names to book codes used by the API
-function convertBookNameToCode(bookName: string): string {
-  // This is a simplified mapping - you might need to expand this based on the API's requirements
-  const bookMap: Record<string, string> = {
-    "Genesis": "GEN",
-    "Exodus": "EXO",
-    "Leviticus": "LEV",
-    "Numbers": "NUM",
-    "Deuteronomy": "DEU",
-    "Joshua": "JOS",
-    "Judges": "JDG",
-    "Ruth": "RUT",
-    "1 Samuel": "1SA",
-    "2 Samuel": "2SA",
-    "1 Kings": "1KI",
-    "2 Kings": "2KI",
-    "1 Chronicles": "1CH",
-    "2 Chronicles": "2CH",
-    "Ezra": "EZR",
-    "Nehemiah": "NEH",
-    "Esther": "EST",
-    "Job": "JOB",
-    "Psalms": "PSA",
-    "Psalm": "PSA",
-    "Proverbs": "PRO",
-    "Ecclesiastes": "ECC",
-    "Song of Solomon": "SNG",
-    "Isaiah": "ISA",
-    "Jeremiah": "JER",
-    "Lamentations": "LAM",
-    "Ezekiel": "EZK",
-    "Daniel": "DAN",
-    "Hosea": "HOS",
-    "Joel": "JOL",
-    "Amos": "AMO",
-    "Obadiah": "OBA",
-    "Jonah": "JON",
-    "Micah": "MIC",
-    "Nahum": "NAH",
-    "Habakkuk": "HAB",
-    "Zephaniah": "ZEP",
-    "Haggai": "HAG",
-    "Zechariah": "ZEC",
-    "Malachi": "MAL",
-    "Matthew": "MAT",
-    "Mark": "MRK",
-    "Luke": "LUK",
-    "John": "JHN",
-    "Acts": "ACT",
-    "Romans": "ROM",
-    "1 Corinthians": "1CO",
-    "2 Corinthians": "2CO",
-    "Galatians": "GAL",
-    "Ephesians": "EPH",
-    "Philippians": "PHP",
-    "Colossians": "COL",
-    "1 Thessalonians": "1TH",
-    "2 Thessalonians": "2TH",
-    "1 Timothy": "1TI",
-    "2 Timothy": "2TI",
-    "Titus": "TIT",
-    "Philemon": "PHM",
-    "Hebrews": "HEB",
-    "James": "JAS",
-    "1 Peter": "1PE",
-    "2 Peter": "2PE",
-    "1 John": "1JN",
-    "2 John": "2JN",
-    "3 John": "3JN",
-    "Jude": "JUD",
-    "Revelation": "REV"
-  };
-
-  // Try to match the book name directly
-  let code = bookMap[bookName];
-  
-  if (code) return code;
-  
-  // If not found, try to match the book name case-insensitively
-  for (const [name, bookCode] of Object.entries(bookMap)) {
-    if (name.toLowerCase() === bookName.toLowerCase()) {
-      return bookCode;
-    }
-  }
-  
-  // If still not found, check if it starts with the book name (abbreviated form)
-  for (const [name, bookCode] of Object.entries(bookMap)) {
-    if (name.toLowerCase().startsWith(bookName.toLowerCase())) {
-      return bookCode;
-    }
-  }
-  
-  // Default to Genesis if no match found
-  return "GEN";
-}
-
-// Map translation codes to version IDs
-export const translationToVersionMap: Record<string, string> = {
-  "eng_kjv": "en-KJV",
-  "eng_web": "en-WEB",
-  "eng_bbe": "en-BBE",
-  "eng_asv": "en-ASV",
-  // Add more mappings as needed
 };
 
-// Get the available Bible versions
+// Default Bible version to use (KJV)
+export const DEFAULT_BIBLE_VERSION = "de4e12af7f28f599-02";
+
+// Get available Bible versions with improved error handling
 export async function getBibleVersions(): Promise<BibleVersion[]> {
   try {
-    const translations = await getAvailableTranslations();
-    
-    // Ensure the translations response is an array
-    if (!Array.isArray(translations) || translations.length === 0) {
-      console.warn("Translations data is not a valid array:", translations);
+    const response = await fetchFromApi("/bibles");
+    if (!response?.data || !Array.isArray(response.data)) {
+      console.warn("Invalid Bible versions response:", response);
       return defaultBibleVersions();
     }
     
-    return translations.map((t: any) => ({
-      id: t.id || t.code || "eng_kjv",
-      name: t.name || t.abbreviation || "Unknown Version",
-      abbreviation: t.abbreviation || t.id || t.code || "UNK"
+    return response.data.map((version: any) => ({
+      id: version.id,
+      name: version.name,
+      abbreviation: version.abbreviation || version.id.substring(0, 3).toUpperCase(),
     }));
   } catch (error) {
     console.error("Error fetching Bible versions:", error);
@@ -265,15 +60,206 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
   }
 }
 
+// Parse HTML content from API.Bible to extract verses
+export const parseVersesFromHTML = (htmlContent: string, bookName: string, chapter: number): BibleVerse[] => {
+  const verses: BibleVerse[] = [];
+  
+  // Use a more robust regex to extract verse numbers and text from HTML
+  const verseRegex = /<span data-number="(\d+)".*?class="verse".*?>(.*?)(?=<span data-number|$)/gs;
+  let match;
+  
+  // Generate a book_id from the book name
+  const book_id = bookName.substring(0, 3).toUpperCase();
+  
+  while ((match = verseRegex.exec(htmlContent)) !== null) {
+    const verseNumber = parseInt(match[1], 10);
+    // Replace HTML tags and clean up text
+    let text = match[2].replace(/<\/?[^>]+(>|$)/g, "").trim();
+    
+    // Handle special characters and formatting
+    text = text.replace(/&nbsp;/g, " ")
+               .replace(/&quot;/g, '"')
+               .replace(/&amp;/g, "&")
+               .replace(/\s+/g, " ");
+    
+    verses.push({
+      book_id,
+      book_name: bookName,
+      chapter,
+      verse: verseNumber,
+      text,
+    });
+  }
+  
+  return verses;
+};
+
+// Get a Bible passage by reference with enhanced error handling
+export const fetchPassageFromApi = async (
+  reference: string,
+  versionId: string = DEFAULT_BIBLE_VERSION
+): Promise<BiblePassageResponse> => {
+  try {
+    // Parse the reference parts
+    const { bookName, chapter, verseStart, verseEnd } = parseReferenceForApi(reference);
+    
+    // Find the book ID
+    const bookId = await getBookId(bookName, versionId);
+    if (!bookId) {
+      throw new Error(`Book "${bookName}" not found`);
+    }
+    
+    // Set up the endpoint based on whether it's a chapter or specific verses
+    let endpoint: string;
+    
+    if (verseStart) {
+      // It's a specific verse or range
+      if (verseEnd) {
+        endpoint = `/bibles/${versionId}/passages/${bookId}.${chapter}.${verseStart}-${verseEnd}?content-type=html&include-notes=false`;
+      } else {
+        endpoint = `/bibles/${versionId}/verses/${bookId}.${chapter}.${verseStart}?content-type=html&include-notes=false`;
+      }
+    } else {
+      // It's a whole chapter
+      endpoint = `/bibles/${versionId}/chapters/${bookId}.${chapter}?content-type=html&include-notes=false`;
+    }
+    
+    console.log(`Fetching passage with endpoint: ${endpoint}`);
+    const response = await fetchFromApi(endpoint);
+    
+    if (!response.data || !response.data.content) {
+      throw new Error("Invalid passage response");
+    }
+    
+    // Parse verses from HTML content
+    const passageData = response.data;
+    const verses = parseVersesFromHTML(passageData.content, bookName, chapter);
+    
+    if (verses.length === 0) {
+      throw new Error(`No verses found for "${reference}"`);
+    }
+    
+    return {
+      passage: verses,
+      reference: passageData.reference || reference,
+    };
+  } catch (error: any) {
+    console.error("Error fetching Bible passage:", error);
+    return {
+      passage: [],
+      reference: reference,
+      error: error.message || "Failed to load Bible passage"
+    };
+  }
+};
+
+// Get the correct book ID for API.Bible with improved matching
+export const getBookId = async (bookName: string, versionId: string): Promise<string | null> => {
+  try {
+    const booksResponse = await fetchFromApi(`/bibles/${versionId}/books`);
+    if (!booksResponse?.data || !Array.isArray(booksResponse.data)) {
+      throw new Error("Invalid books response");
+    }
+    
+    const books = booksResponse.data;
+    
+    // First try exact match (case insensitive)
+    const exactMatch = books.find(b => 
+      b.name.toLowerCase() === bookName.toLowerCase() ||
+      b.nameLong?.toLowerCase() === bookName.toLowerCase()
+    );
+    if (exactMatch) return exactMatch.id;
+    
+    // Try abbreviation match
+    const abbrMatch = books.find(b => 
+      b.abbreviation?.toLowerCase() === bookName.toLowerCase()
+    );
+    if (abbrMatch) return abbrMatch.id;
+    
+    // Try partial match with stronger criteria
+    const partialMatches = books.filter(b => 
+      b.name.toLowerCase().includes(bookName.toLowerCase()) || 
+      bookName.toLowerCase().includes(b.name.toLowerCase()) ||
+      (b.nameLong && b.nameLong.toLowerCase().includes(bookName.toLowerCase()))
+    );
+    
+    // If multiple partial matches, choose the shortest one
+    // (likely to be the most precise match)
+    if (partialMatches.length > 0) {
+      return partialMatches.sort((a, b) => a.name.length - b.name.length)[0].id;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Error finding book ID:", error);
+    return null;
+  }
+};
+
+// Parse a reference string for API.Bible with improved parsing
+export function parseReferenceForApi(reference: string): { 
+  bookName: string; 
+  chapter: number; 
+  verseStart?: number; 
+  verseEnd?: number 
+} {
+  // Extract book name (everything before the first number)
+  const bookMatch = reference.match(/^(\d?\s?[A-Za-z]+\s*[A-Za-z]*)/);
+  const bookName = bookMatch ? bookMatch[0].trim() : "Genesis";
+  
+  // Extract chapter and verse references with improved regex
+  const numberMatch = reference.match(/(\d+)(?::(\d+))?(?:-(\d+))?/);
+  
+  if (!numberMatch) {
+    return { bookName, chapter: 1 };
+  }
+  
+  const chapter = parseInt(numberMatch[1], 10) || 1;
+  const verseStart = numberMatch[2] ? parseInt(numberMatch[2], 10) : undefined;
+  const verseEnd = numberMatch[3] ? parseInt(numberMatch[3], 10) : undefined;
+  
+  return { bookName, chapter, verseStart, verseEnd };
+}
+
 // Default Bible versions to use when API fails
-function defaultBibleVersions(): BibleVersion[] {
+export function defaultBibleVersions(): BibleVersion[] {
   return [
-    { id: "eng_kjv", name: "King James Version", abbreviation: "KJV" },
-    { id: "eng_web", name: "World English Bible", abbreviation: "WEB" },
-    { id: "eng_bbe", name: "Basic English Bible", abbreviation: "BBE" },
-    { id: "eng_asv", name: "American Standard Version", abbreviation: "ASV" }
+    { id: "de4e12af7f28f599-02", name: "King James Version", abbreviation: "KJV" },
+    { id: "06125adad2d5898a-01", name: "English Standard Version", abbreviation: "ESV" },
+    { id: "01b29f4b342acc35-01", name: "New International Version", abbreviation: "NIV" },
+    { id: "40072c4a5aba4022-01", name: "New American Standard Bible", abbreviation: "NASB" }
   ];
 }
 
-// Default translation
-export const DEFAULT_BIBLE_VERSION = "eng_kjv";
+// Method for the App Bible API
+export async function fetchPassageFromNewApi(
+  reference: string,
+  versionId: string = DEFAULT_BIBLE_VERSION
+): Promise<BiblePassageResponse> {
+  // Attempt to use the API.Bible integration first
+  try {
+    return await fetchPassageFromApi(reference, versionId);
+  } catch (error) {
+    console.error("Primary API failed, trying fallback...", error);
+    return fallbackFetchPassage(reference);
+  }
+}
+
+// Fallback method to handle API failures
+async function fallbackFetchPassage(reference: string): Promise<BiblePassageResponse> {
+  // This is a very simplified fallback implementation
+  // In a real app, you might want to implement a more robust solution
+  const { bookName, chapter, verseStart, verseEnd } = parseReferenceForApi(reference);
+  
+  return {
+    passage: [{
+      book_id: bookName.substring(0, 3).toUpperCase(),
+      book_name: bookName,
+      chapter: chapter,
+      verse: verseStart || 1,
+      text: `API unavailable. Please try again later. (${reference})`
+    }],
+    reference: reference,
+    error: "API is temporarily unavailable. Using fallback content."
+  };
+}
