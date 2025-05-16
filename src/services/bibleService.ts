@@ -5,6 +5,12 @@ import {
   fetchPassageFromApi,
   getBibleVersions as getApiVersions,
 } from "./bibleApi";
+import {
+  DEFAULT_YOUVERSION_VERSION,
+  fetchPassageFromYouVersion,
+  getYouVersionBibleVersions,
+  checkYouVersionApiStatus
+} from "./youVersionApi";
 
 // Types for Bible API
 export type BibleVerse = {
@@ -34,6 +40,22 @@ export type BibleVersion = {
   abbreviation: string;
 };
 
+// Bible API Provider Types
+export type BibleApiProvider = "api.bible" | "youversion";
+
+// Store the current Bible API provider
+let currentProvider: BibleApiProvider = "youversion"; // Default to YouVersion
+
+// Function to switch between Bible API providers
+export const setBibleApiProvider = (provider: BibleApiProvider) => {
+  currentProvider = provider;
+};
+
+// Get the current Bible API provider
+export const getBibleApiProvider = (): BibleApiProvider => {
+  return currentProvider;
+};
+
 // This function parses Bible references like "Genesis 1", "John 3:16", or "Romans 8:28-39"
 export const parseReference = (reference: string): { 
   book: string; 
@@ -59,22 +81,18 @@ export const parseReference = (reference: string): {
   return { book, chapter, verseStart, verseEnd };
 };
 
-// Fetch Bible passage using the Bible API
+// Fetch Bible passage using the selected Bible API provider
 export const fetchBiblePassage = async (
   reference: string, 
-  versionId: string = DEFAULT_BIBLE_VERSION
+  versionId?: string
 ): Promise<BiblePassageResponse> => {
   try {
-    const response = await fetchPassageFromApi(reference, versionId);
-    
-    // Show toast only if there's an error from the API
-    if (response.error) {
-      toast.error("Bible passage error", {
-        description: response.error
-      });
+    // Determine which API to use based on the current provider
+    if (currentProvider === "youversion") {
+      return await fetchPassageFromYouVersion(reference, versionId || DEFAULT_YOUVERSION_VERSION);
+    } else {
+      return await fetchPassageFromApi(reference, versionId || DEFAULT_BIBLE_VERSION);
     }
-    
-    return response;
   } catch (error: any) {
     console.error("Error fetching Bible passage:", error);
     toast.error("Failed to load Bible passage", {
@@ -86,6 +104,25 @@ export const fetchBiblePassage = async (
       reference: "",
       error: error.message
     };
+  }
+};
+
+// Get available Bible versions based on the current provider
+export const getAvailableVersions = async (): Promise<BibleVersion[]> => {
+  try {
+    if (currentProvider === "youversion") {
+      return getYouVersionBibleVersions();
+    } else {
+      const versions = await getApiVersions();
+      if (!versions || versions.length === 0) {
+        throw new Error("No Bible versions available");
+      }
+      return versions;
+    }
+  } catch (error) {
+    console.error("Error fetching Bible versions:", error);
+    // Return default versions if API fails
+    return defaultBibleVersions();
   }
 };
 
@@ -106,9 +143,9 @@ const commonBibleBooks = [
 ];
 
 // Get available books with fallback
-export const getAvailableBooks = async (versionId: string = DEFAULT_BIBLE_VERSION): Promise<string[]> => {
+export const getAvailableBooks = async (versionId?: string): Promise<string[]> => {
   try {
-    // In a real implementation, you would fetch this from the API
+    // In a real implementation, you could fetch this from the API
     // For now, we'll use the common books array
     return commonBibleBooks;
   } catch (error) {
@@ -136,7 +173,7 @@ const chapterCounts: Record<string, number> = {
 // Get available chapters with fallback
 export const getAvailableChapters = async (
   book: string,
-  versionId: string = DEFAULT_BIBLE_VERSION
+  versionId?: string
 ): Promise<number[]> => {
   try {
     const chapterCount = chapterCounts[book] || 1;
@@ -148,22 +185,26 @@ export const getAvailableChapters = async (
   }
 };
 
-// Get available Bible versions with improved reliability
-export const getAvailableVersions = async (): Promise<BibleVersion[]> => {
-  try {
-    const versions = await getApiVersions();
-    if (!versions || versions.length === 0) {
-      throw new Error("No Bible versions available");
-    }
-    return versions;
-  } catch (error) {
-    console.error("Error fetching Bible versions:", error);
-    // Return default versions if API fails
-    return [
-      { id: "de4e12af7f28f599-02", name: "King James Version", abbreviation: "KJV" },
-      { id: "06125adad2d5898a-01", name: "English Standard Version", abbreviation: "ESV" },
-      { id: "01b29f4b342acc35-01", name: "New International Version", abbreviation: "NIV" },
-      { id: "40072c4a5aba4022-01", name: "New American Standard Bible", abbreviation: "NASB" }
-    ];
+// Default Bible versions for fallback
+function defaultBibleVersions(): BibleVersion[] {
+  if (currentProvider === "youversion") {
+    return getYouVersionBibleVersions();
   }
+  
+  return [
+    { id: "de4e12af7f28f599-02", name: "King James Version", abbreviation: "KJV" },
+    { id: "06125adad2d5898a-01", name: "English Standard Version", abbreviation: "ESV" },
+    { id: "01b29f4b342acc35-01", name: "New International Version", abbreviation: "NIV" },
+    { id: "40072c4a5aba4022-01", name: "New American Standard Bible", abbreviation: "NASB" }
+  ];
+}
+
+// Function to get default version ID based on current provider
+export const getDefaultVersionId = (): string => {
+  return currentProvider === "youversion" ? DEFAULT_YOUVERSION_VERSION : DEFAULT_BIBLE_VERSION;
+};
+
+// Check if a version ID belongs to YouVersion (simple 3-4 letter codes) or API.Bible (complex IDs)
+export const isYouVersionId = (versionId: string): boolean => {
+  return /^[A-Z]{3,5}$/.test(versionId);
 };

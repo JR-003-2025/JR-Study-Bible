@@ -11,9 +11,13 @@ import {
   getAvailableBooks, 
   getAvailableChapters,
   getAvailableVersions,
-  BibleVersion
+  BibleVersion,
+  setBibleApiProvider,
+  getBibleApiProvider,
+  BibleApiProvider,
+  getDefaultVersionId,
+  isYouVersionId
 } from "@/services/bibleService";
-import { DEFAULT_BIBLE_VERSION } from "@/services/bibleApi";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -23,7 +27,8 @@ import {
   Search,
   ArrowRight,
   ChevronDown,
-  AlertCircle
+  AlertCircle,
+  Settings
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -51,9 +56,11 @@ export function BibleReader({
   const [availableChapters, setAvailableChapters] = useState<number[]>([]);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [bibleVersions, setBibleVersions] = useState<BibleVersion[]>([]);
-  const [selectedVersion, setSelectedVersion] = useState<string>(DEFAULT_BIBLE_VERSION);
+  const [selectedVersion, setSelectedVersion] = useState<string>(getDefaultVersionId());
   const [isControlsOpen, setIsControlsOpen] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string>("");
+  const [apiProvider, setApiProvider] = useState<BibleApiProvider>(getBibleApiProvider());
+  const [showSettings, setShowSettings] = useState<boolean>(false);
 
   // Load available Bible versions
   useEffect(() => {
@@ -61,6 +68,9 @@ export function BibleReader({
       try {
         const versions = await getAvailableVersions();
         setBibleVersions(versions);
+        
+        // Set default version based on current provider
+        setSelectedVersion(getDefaultVersionId());
       } catch (error) {
         console.error("Failed to load Bible versions:", error);
         toast.error("Failed to load Bible versions", { 
@@ -70,7 +80,7 @@ export function BibleReader({
     };
     
     loadVersions();
-  }, []);
+  }, [apiProvider]); // Reload when API provider changes
 
   // Load available books when version changes
   useEffect(() => {
@@ -205,6 +215,23 @@ export function BibleReader({
     });
   };
 
+  // Handle API provider change
+  const handleApiProviderChange = (provider: BibleApiProvider) => {
+    setApiProvider(provider);
+    setBibleApiProvider(provider);
+    setInitialLoading(true);
+    
+    toast.info(`Switched to ${provider === "youversion" ? "YouVersion" : "API.Bible"} provider`, {
+      description: "Loading Bible content..."
+    });
+    
+    // Reload versions and current passage with new provider
+    const defaultVersion = getDefaultVersionId();
+    setSelectedVersion(defaultVersion);
+    
+    // The version change will trigger a reload of the passage
+  };
+
   if (initialLoading) {
     return (
       <div className="flex justify-center items-center py-20 animate-fade-in">
@@ -271,6 +298,29 @@ export function BibleReader({
                 </Tooltip>
               </TooltipProvider>
               
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant={isDarkTheme ? "outline" : "ghost"} 
+                      size="sm"
+                      onClick={() => setShowSettings(!showSettings)}
+                      className={cn(
+                        isDarkTheme ? "border-white/20 hover:bg-white/10 text-white" : "",
+                        "transition-transform hover:scale-105",
+                        showSettings ? "bg-secondary" : ""
+                      )}
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span className="sr-only">API Settings</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Bible API Settings</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              
               <Collapsible 
                 open={isControlsOpen} 
                 onOpenChange={setIsControlsOpen}
@@ -318,7 +368,52 @@ export function BibleReader({
             </div>
           </div>
           
-          {/* Controls content - properly placed inside the Collapsible */}
+          {/* API Provider Settings */}
+          {showSettings && (
+            <div className={cn(
+              "mt-4 p-4 rounded-md animate-fade-in",
+              isDarkTheme ? "bg-white/5" : "bg-gray-50"
+            )}>
+              <h3 className={cn(
+                "text-sm font-medium mb-3",
+                isDarkTheme ? "text-white/90" : "text-gray-700"
+              )}>Bible API Provider</h3>
+              
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={apiProvider === "youversion" ? "default" : "outline"}
+                  onClick={() => handleApiProviderChange("youversion")}
+                  className={cn(
+                    "flex-1",
+                    isDarkTheme && apiProvider !== "youversion" ? "border-white/20 text-white" : ""
+                  )}
+                >
+                  YouVersion
+                </Button>
+                <Button
+                  size="sm"
+                  variant={apiProvider === "api.bible" ? "default" : "outline"}
+                  onClick={() => handleApiProviderChange("api.bible")}
+                  className={cn(
+                    "flex-1",
+                    isDarkTheme && apiProvider !== "api.bible" ? "border-white/20 text-white" : ""
+                  )}
+                >
+                  API.Bible
+                </Button>
+              </div>
+              
+              <p className={cn(
+                "text-xs mt-2",
+                isDarkTheme ? "text-white/60" : "text-gray-500"
+              )}>
+                YouVersion provides better reliability and simpler version codes.
+              </p>
+            </div>
+          )}
+          
+          {/* Controls content - inside the Collapsible */}
           <Collapsible open={isControlsOpen} onOpenChange={setIsControlsOpen}>
             <CollapsibleContent className="transition-all">
               <CardContent className={cn(

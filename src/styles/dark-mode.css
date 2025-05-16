@@ -5,6 +5,8 @@
   --bible-darkblue: #0f172a;
   --bible-gold: #f59e0b;
   --bible-cream: #f8fafc;
+  --bible-youversion-blue: #10579b;
+  --bible-youversion-light: #4a90e2;
 }
 
 /* Theme transition */
@@ -70,6 +72,22 @@
 .dark-mode .bible-verse:hover .verse-highlight-btn,
 .dark-theme .bible-verse:hover .verse-highlight-btn {
   opacity: 1;
+}
+
+/* YouVersion specific styles */
+.youversion-theme {
+  --primary-color: var(--bible-youversion-blue);
+  --accent-color: var(--bible-youversion-light);
+}
+
+.youversion-active {
+  background-color: var(--bible-youversion-blue);
+  color: white;
+}
+
+.dark-theme .youversion-active {
+  background-color: var(--bible-gold);
+  color: var(--bible-darkblue);
 }
 
 /* Immersive mode styles */
@@ -156,4 +174,60 @@
   background-color: rgba(239, 68, 68, 0.2);
   border: 1px solid rgba(239, 68, 68, 0.4);
   color: #fca5a5;
+}
+
+/* Success message styling */
+.success-message {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background-color: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
+  margin: 1rem 0;
+}
+
+.dark-theme .success-message {
+  background-color: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+}
+
+/* Bible API provider selection styles */
+.api-provider-selector {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.api-provider-button {
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.api-provider-button.active {
+  background-color: var(--bible-blue);
+  color: white;
+}
+
+.dark-theme .api-provider-button.active {
+  background-color: var(--bible-gold);
+  color: var(--bible-darkblue);
+}
+
+.dark-theme .api-provider-button {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.api-provider-button:hover:not(.active) {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.dark-theme .api-provider-button:hover:not(.active) {
+  background-color: rgba(255, 255, 255, 0.1);
 }
