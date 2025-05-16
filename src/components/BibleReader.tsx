@@ -52,20 +52,30 @@ export function BibleReader({
   const [bibleVersions, setBibleVersions] = useState<BibleVersion[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<string>(DEFAULT_BIBLE_VERSION);
   const [isControlsOpen, setIsControlsOpen] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string>("");
 
   // Load available Bible versions
   useEffect(() => {
     const loadVersions = async () => {
       try {
         const versions = await getAvailableVersions();
-        setBibleVersions(versions);
+        if (versions && versions.length > 0) {
+          setBibleVersions(versions);
+        } else {
+          setBibleVersions([
+            { id: "eng_kjv", name: "King James Version", abbreviation: "KJV" },
+            { id: "eng_web", name: "World English Bible", abbreviation: "WEB" }
+          ]);
+        }
       } catch (error) {
         console.error("Failed to load Bible versions:", error);
-        // Set fallback versions if fetch fails
         setBibleVersions([
           { id: "eng_kjv", name: "King James Version", abbreviation: "KJV" },
           { id: "eng_web", name: "World English Bible", abbreviation: "WEB" }
         ]);
+        toast.error("Failed to load Bible versions", { 
+          description: "Using default versions instead"
+        });
       }
     };
     
@@ -80,6 +90,9 @@ export function BibleReader({
         setAvailableBooks(books);
       } catch (error) {
         console.error("Failed to load books:", error);
+        toast.error("Failed to load Bible books", {
+          description: "Please try a different Bible version"
+        });
       }
     };
     
@@ -90,12 +103,14 @@ export function BibleReader({
 
   const loadPassage = async (ref: string) => {
     setLoading(true);
+    setLoadError("");
     try {
       console.log("Fetching passage:", ref, "version:", selectedVersion);
       const response = await fetchBiblePassage(ref, selectedVersion);
       
       if (response.error) {
         toast.error("Error loading passage", { description: response.error });
+        setLoadError(response.error);
         return;
       }
       
@@ -110,11 +125,19 @@ export function BibleReader({
         setSelectedChapter(firstVerse.chapter);
         
         // Load available chapters for this book
-        const chapters = await getAvailableChapters(firstVerse.book_name, selectedVersion);
-        setAvailableChapters(chapters);
+        try {
+          const chapters = await getAvailableChapters(firstVerse.book_name, selectedVersion);
+          setAvailableChapters(chapters);
+        } catch (chapterError) {
+          console.error("Failed to load chapters:", chapterError);
+        }
       }
     } catch (error) {
       console.error("Failed to load passage:", error);
+      setLoadError(error instanceof Error ? error.message : "Unknown error occurred");
+      toast.error("Failed to load Bible passage", {
+        description: "Please check your reference and try again"
+      });
     } finally {
       setLoading(false);
       setInitialLoading(false);
@@ -143,6 +166,9 @@ export function BibleReader({
       }
     } catch (error) {
       console.error("Failed to load chapters:", error);
+      toast.error("Failed to load chapters", {
+        description: "Please try a different book"
+      });
       setLoading(false);
     }
   };
@@ -274,7 +300,7 @@ export function BibleReader({
                     <span className="sr-only">Toggle Controls</span>
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent>
+                <CollapsibleContent className="transition-all">
                   <CardContent className={cn(
                     "py-6 px-6 transition-all",
                     isDarkTheme ? "bg-bible-darkblue/80" : "bg-white"
@@ -427,7 +453,7 @@ export function BibleReader({
                 "mt-2 text-lg font-serif",
                 isDarkTheme ? "text-white/70" : "text-gray-500"
               )}>
-                No verses found. Try a different reference.
+                {loadError ? `Error: ${loadError}` : "No verses found. Try a different reference."}
               </p>
             </div>
           ) : (

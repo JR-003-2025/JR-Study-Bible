@@ -5,18 +5,44 @@ import { BiblePassageResponse, BibleVerse, BibleVersion } from "./bibleService";
 export const BASE_URL = "https://bible.helloao.org/api";
 
 export async function getAvailableTranslations(): Promise<any[]> {
-  const res = await fetch(`${BASE_URL}/available_translations.json`);
-  return res.json();
+  try {
+    const res = await fetch(`${BASE_URL}/available_translations.json`);
+    if (!res.ok) {
+      throw new Error(`API Error: ${res.status} ${res.statusText}`);
+    }
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error("Failed to fetch translations:", error);
+    return [];
+  }
 }
 
 export async function getBooks(translation: string): Promise<any[]> {
-  const res = await fetch(`${BASE_URL}/${translation}/books.json`);
-  return res.json();
+  try {
+    const res = await fetch(`${BASE_URL}/${translation}/books.json`);
+    if (!res.ok) {
+      throw new Error(`API Error: ${res.status} ${res.statusText}`);
+    }
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error(`Failed to fetch books for translation ${translation}:`, error);
+    return [];
+  }
 }
 
 export async function getChapter(translation: string, book: string, chapter: number): Promise<any> {
-  const res = await fetch(`${BASE_URL}/${translation}/${book}/${chapter}.json`);
-  return res.json();
+  try {
+    const res = await fetch(`${BASE_URL}/${translation}/${book}/${chapter}.json`);
+    if (!res.ok) {
+      throw new Error(`API Error: ${res.status} ${res.statusText}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error(`Failed to fetch chapter ${book} ${chapter}:`, error);
+    throw error;
+  }
 }
 
 // Helper function to format the API response to match our existing BiblePassageResponse format
@@ -35,7 +61,7 @@ export async function fetchPassageFromNewApi(
       return {
         passage: [],
         reference: reference,
-        error: "Failed to load passage"
+        error: "Failed to load passage: No verses found"
       };
     }
     
@@ -53,6 +79,14 @@ export async function fetchPassageFromNewApi(
       }
     }
     
+    if (!verses || verses.length === 0) {
+      return {
+        passage: [],
+        reference: reference,
+        error: `No verses found for ${reference}`
+      };
+    }
+    
     // Format the verses to match our BibleVerse format
     const formattedVerses: BibleVerse[] = verses.map((v: any) => ({
       book_id: bookCode,
@@ -67,7 +101,7 @@ export async function fetchPassageFromNewApi(
       reference: `${chapterData.book_name || bookCode} ${chapter}${verseStart ? `:${verseStart}${verseEnd ? `-${verseEnd}` : ""}` : ""}`
     };
   } catch (error) {
-    console.error("Error fetching passage from new API:", error);
+    console.error("Error fetching passage from API:", error);
     return {
       passage: [],
       reference: reference,
@@ -215,26 +249,30 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
     const translations = await getAvailableTranslations();
     
     // Ensure the translations response is an array
-    if (!Array.isArray(translations)) {
-      console.warn("Translations data is not an array:", translations);
-      return [
-        { id: "eng_kjv", name: "King James Version", abbreviation: "KJV" },
-        { id: "eng_web", name: "World English Bible", abbreviation: "WEB" }
-      ];
+    if (!Array.isArray(translations) || translations.length === 0) {
+      console.warn("Translations data is not a valid array:", translations);
+      return defaultBibleVersions();
     }
     
     return translations.map((t: any) => ({
-      id: t.id || t.code,
-      name: t.name,
-      abbreviation: t.abbreviation || t.id || t.code
+      id: t.id || t.code || "eng_kjv",
+      name: t.name || t.abbreviation || "Unknown Version",
+      abbreviation: t.abbreviation || t.id || t.code || "UNK"
     }));
   } catch (error) {
     console.error("Error fetching Bible versions:", error);
-    return [
-      { id: "eng_kjv", name: "King James Version", abbreviation: "KJV" },
-      { id: "eng_web", name: "World English Bible", abbreviation: "WEB" }
-    ];
+    return defaultBibleVersions();
   }
+}
+
+// Default Bible versions to use when API fails
+function defaultBibleVersions(): BibleVersion[] {
+  return [
+    { id: "eng_kjv", name: "King James Version", abbreviation: "KJV" },
+    { id: "eng_web", name: "World English Bible", abbreviation: "WEB" },
+    { id: "eng_bbe", name: "Basic English Bible", abbreviation: "BBE" },
+    { id: "eng_asv", name: "American Standard Version", abbreviation: "ASV" }
+  ];
 }
 
 // Default translation

@@ -9,7 +9,7 @@
 
 /* Theme transition */
 .theme-transition {
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* Dark mode global styles */
@@ -24,6 +24,7 @@
   background: rgba(15, 23, 42, 0.9);
   backdrop-filter: blur(10px);
   border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 /* Bible reader dark theme styles */
@@ -55,7 +56,7 @@
 .dark-mode .verse-highlight-btn,
 .dark-theme .verse-highlight-btn {
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
 
 .dark-mode .bible-verse:hover .verse-highlight-btn,
@@ -91,4 +92,34 @@
 
 .animate-slide-up {
   animation: slideUp 0.3s ease-out forwards;
+}
+
+/* Card enhancements */
+.dark-theme .card-content {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Form input enhancements for dark mode */
+.dark-theme input::placeholder,
+.dark-theme select::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* Scrollbar styling for dark mode */
+.dark-theme ::-webkit-scrollbar {
+  width: 10px;
+}
+
+.dark-theme ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 5px;
+}
+
+.dark-theme ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 5px;
+}
+
+.dark-theme ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
