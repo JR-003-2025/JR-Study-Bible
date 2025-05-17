@@ -1,4 +1,3 @@
-
 // src/services/bibleApi.ts
 import { BiblePassageResponse, BibleVerse, BibleVersion } from "./bibleService";
 import { toast } from "sonner";
@@ -24,15 +23,23 @@ const fetchFromApi = async (endpoint: string): Promise<any> => {
     });
 
     if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `API Error: ${response.status} ${response.statusText}`
+      );
     }
 
     const data = await response.json();
+    
+    // Validate the response data
+    if (!data || !data.data) {
+      throw new Error("Invalid API response format");
+    }
+    
     cache[endpoint] = data;
     return data;
   } catch (error: any) {
     console.error("API.Bible Error:", error);
-    // Don't toast from here, let the calling function handle UI notifications
     throw error;
   }
 };
@@ -60,12 +67,12 @@ export async function getBibleVersions(): Promise<BibleVersion[]> {
   }
 }
 
-// Parse HTML content from API.Bible to extract verses
+// Parse HTML content from API.Bible to extract verses with improved parsing
 export const parseVersesFromHTML = (htmlContent: string, bookName: string, chapter: number): BibleVerse[] => {
   const verses: BibleVerse[] = [];
   
   // Use a more robust regex to extract verse numbers and text from HTML
-  const verseRegex = /<span data-number="(\d+)".*?class="verse".*?>(.*?)(?=<span data-number|$)/gs;
+  const verseRegex = /<span\s+data-number="(\d+)"[^>]*>(?:<[^>]+>)*([^<]+)/g;
   let match;
   
   // Generate a book_id from the book name
@@ -106,7 +113,7 @@ export const fetchPassageFromApi = async (
     // Find the book ID
     const bookId = await getBookId(bookName, versionId);
     if (!bookId) {
-      throw new Error(`Book "${bookName}" not found`);
+      throw new Error(`Book "${bookName}" not found. Please check the spelling and try again.`);
     }
     
     // Set up the endpoint based on whether it's a chapter or specific verses
@@ -115,20 +122,20 @@ export const fetchPassageFromApi = async (
     if (verseStart) {
       // It's a specific verse or range
       if (verseEnd) {
-        endpoint = `/bibles/${versionId}/passages/${bookId}.${chapter}.${verseStart}-${verseEnd}?content-type=html&include-notes=false`;
+        endpoint = `/bibles/${versionId}/passages/${bookId}.${chapter}.${verseStart}-${verseEnd}?content-type=html&include-notes=false&include-verse-numbers=true`;
       } else {
-        endpoint = `/bibles/${versionId}/verses/${bookId}.${chapter}.${verseStart}?content-type=html&include-notes=false`;
+        endpoint = `/bibles/${versionId}/verses/${bookId}.${chapter}.${verseStart}?content-type=html&include-notes=false&include-verse-numbers=true`;
       }
     } else {
       // It's a whole chapter
-      endpoint = `/bibles/${versionId}/chapters/${bookId}.${chapter}?content-type=html&include-notes=false`;
+      endpoint = `/bibles/${versionId}/chapters/${bookId}.${chapter}?content-type=html&include-notes=false&include-verse-numbers=true`;
     }
     
     console.log(`Fetching passage with endpoint: ${endpoint}`);
     const response = await fetchFromApi(endpoint);
     
     if (!response.data || !response.data.content) {
-      throw new Error("Invalid passage response");
+      throw new Error(`No content found for "${reference}". Please try a different reference or Bible version.`);
     }
     
     // Parse verses from HTML content
@@ -136,7 +143,7 @@ export const fetchPassageFromApi = async (
     const verses = parseVersesFromHTML(passageData.content, bookName, chapter);
     
     if (verses.length === 0) {
-      throw new Error(`No verses found for "${reference}"`);
+      throw new Error(`No verses found for "${reference}". The passage may not exist in this translation.`);
     }
     
     return {
@@ -148,7 +155,7 @@ export const fetchPassageFromApi = async (
     return {
       passage: [],
       reference: reference,
-      error: error.message || "Failed to load Bible passage"
+      error: error.message || "Failed to load Bible passage. Please try a different reference or version."
     };
   }
 };
@@ -205,7 +212,11 @@ export function parseReferenceForApi(reference: string): {
 } {
   // Extract book name (everything before the first number)
   const bookMatch = reference.match(/^(\d?\s?[A-Za-z]+\s*[A-Za-z]*)/);
-  const bookName = bookMatch ? bookMatch[0].trim() : "Genesis";
+  if (!bookMatch) {
+    throw new Error("Invalid book name in reference. Please check the format (e.g., 'John 3:16').");
+  }
+  
+  const bookName = bookMatch[0].trim();
   
   // Extract chapter and verse references with improved regex
   const numberMatch = reference.match(/(\d+)(?::(\d+))?(?:-(\d+))?/);
@@ -249,7 +260,7 @@ export async function fetchPassageFromNewApi(
 async function fallbackFetchPassage(reference: string): Promise<BiblePassageResponse> {
   // This is a very simplified fallback implementation
   // In a real app, you might want to implement a more robust solution
-  const { bookName, chapter, verseStart, verseEnd } = parseReferenceForApi(reference);
+  const { bookName, chapter, verseStart } = parseReferenceForApi(reference);
   
   return {
     passage: [{

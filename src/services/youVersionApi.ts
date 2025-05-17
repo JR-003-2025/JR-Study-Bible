@@ -1,4 +1,4 @@
-
+// src/services/youVersionApi.ts
 import { BibleVerse, BiblePassageResponse, BibleVersion } from "./bibleService";
 import { toast } from "sonner";
 
@@ -30,7 +30,7 @@ const fetchFromYouVersionApi = async (endpoint: string): Promise<any> => {
     // Check specifically for CORS errors
     if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
       console.error("YouVersion API CORS Error:", error);
-      throw new Error("YouVersion API unavailable due to CORS restrictions. Please try API.Bible instead.");
+      throw new Error("CORS_ERROR");
     }
     
     console.error("YouVersion API Error:", error);
@@ -41,7 +41,10 @@ const fetchFromYouVersionApi = async (endpoint: string): Promise<any> => {
 // Check if the YouVersion API is available
 export const checkYouVersionApiStatus = async (): Promise<boolean> => {
   try {
-    await fetch(`${YOUVERSION_API_URL}/status`);
+    const response = await fetch(`${YOUVERSION_API_URL}/status`, {
+      method: 'HEAD',
+      mode: 'no-cors' // This allows us to detect if the API is accessible
+    });
     return true;
   } catch (error) {
     console.error("YouVersion API unavailable:", error);
@@ -113,6 +116,12 @@ export const fetchPassageFromYouVersion = async (
   versionId: string = DEFAULT_YOUVERSION_VERSION
 ): Promise<BiblePassageResponse> => {
   try {
+    // First check if the API is accessible
+    const isAvailable = await checkYouVersionApiStatus();
+    if (!isAvailable) {
+      throw new Error("CORS_ERROR");
+    }
+    
     // Parse the reference for API parameters
     const { book, chapter, verseStart, verseEnd } = parseReferenceForYouVersion(reference);
     
@@ -151,16 +160,13 @@ export const fetchPassageFromYouVersion = async (
     console.error("Error fetching Bible passage from YouVersion:", error);
     
     // Check if this is specifically a CORS error
-    const isCorsError = error.message && (
-      error.message.includes("CORS") || 
-      error.message.includes("Failed to fetch")
-    );
+    const isCorsError = error.message === "CORS_ERROR";
     
     return {
       passage: [],
       reference: reference,
       error: isCorsError 
-        ? "Cannot access YouVersion API due to browser restrictions. Try using API.Bible instead."
+        ? "CORS_ERROR"
         : (error.message || "Failed to load Bible passage")
     };
   }
@@ -191,7 +197,11 @@ export function parseReferenceForYouVersion(reference: string): {
 } {
   // Extract book name (everything before the first number)
   const bookMatch = reference.match(/^(\d?\s?[A-Za-z]+\s*[A-Za-z]*)/);
-  const book = bookMatch ? encodeURIComponent(bookMatch[0].trim()) : "John";
+  if (!bookMatch) {
+    throw new Error("Invalid book name in reference");
+  }
+  
+  const book = encodeURIComponent(bookMatch[0].trim());
   
   // Extract chapter and verse references with improved regex
   const numberMatch = reference.match(/(\d+)(?::(\d+))?(?:-(\d+))?/);
