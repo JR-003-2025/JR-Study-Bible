@@ -28,17 +28,26 @@ import {
   ArrowRight,
   ChevronDown,
   AlertCircle,
-  Settings
+  Settings,
+  TextCursor
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
 
 type BibleReaderProps = {
   initialReference?: string;
   isDarkTheme?: boolean;
   isImmersiveMode?: boolean;
+};
+
+type ReferenceFormValues = {
+  book: string;
+  chapter: string;
+  verse: string;
 };
 
 export function BibleReader({ 
@@ -55,12 +64,22 @@ export function BibleReader({
   const [selectedBook, setSelectedBook] = useState<string>("");
   const [availableChapters, setAvailableChapters] = useState<number[]>([]);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+  const [selectedVerse, setSelectedVerse] = useState<string>("");
   const [bibleVersions, setBibleVersions] = useState<BibleVersion[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<string>(getDefaultVersionId());
   const [isControlsOpen, setIsControlsOpen] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string>("");
   const [apiProvider, setApiProvider] = useState<BibleApiProvider>(getBibleApiProvider());
   const [showSettings, setShowSettings] = useState<boolean>(false);
+
+  // Form for granular reference inputs
+  const form = useForm<ReferenceFormValues>({
+    defaultValues: {
+      book: "",
+      chapter: "",
+      verse: ""
+    }
+  });
 
   // Load available Bible versions
   useEffect(() => {
@@ -150,6 +169,7 @@ export function BibleReader({
 
   const handleBookChange = async (book: string) => {
     setSelectedBook(book);
+    form.setValue("book", book);
     setLoading(true);
     
     try {
@@ -158,6 +178,7 @@ export function BibleReader({
       
       if (chapters.length > 0) {
         setSelectedChapter(chapters[0]);
+        form.setValue("chapter", chapters[0].toString());
         const newRef = `${book} ${chapters[0]}`;
         setInputReference(newRef);
         loadPassage(newRef);
@@ -174,7 +195,24 @@ export function BibleReader({
   const handleChapterChange = (chapter: string) => {
     const chapterNum = parseInt(chapter, 10);
     setSelectedChapter(chapterNum);
-    const newRef = `${selectedBook} ${chapterNum}`;
+    form.setValue("chapter", chapter);
+    
+    let newRef = `${selectedBook} ${chapterNum}`;
+    if (selectedVerse) {
+      newRef += `:${selectedVerse}`;
+    }
+    
+    setInputReference(newRef);
+    loadPassage(newRef);
+  };
+  
+  const handleVerseChange = (verse: string) => {
+    setSelectedVerse(verse);
+    form.setValue("verse", verse);
+    
+    if (!selectedBook || !selectedChapter) return;
+    
+    const newRef = `${selectedBook} ${selectedChapter}:${verse}`;
     setInputReference(newRef);
     loadPassage(newRef);
   };
@@ -187,6 +225,28 @@ export function BibleReader({
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     loadPassage(inputReference);
+  };
+  
+  // New handler for granular reference inputs form
+  const handleGranularSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const bookValue = form.getValues("book") || selectedBook;
+    const chapterValue = form.getValues("chapter") || (selectedChapter?.toString() || "1");
+    const verseValue = form.getValues("verse");
+    
+    if (!bookValue) {
+      toast.error("Please select a book");
+      return;
+    }
+    
+    let referenceString = `${bookValue} ${chapterValue}`;
+    if (verseValue) {
+      referenceString += `:${verseValue}`;
+    }
+    
+    setInputReference(referenceString);
+    loadPassage(referenceString);
   };
 
   const navigateChapter = async (direction: 'prev' | 'next') => {
@@ -205,6 +265,9 @@ export function BibleReader({
     const newChapter = availableChapters[newIndex];
     const newRef = `${selectedBook} ${newChapter}`;
     setInputReference(newRef);
+    form.setValue("chapter", newChapter.toString());
+    setSelectedVerse("");
+    form.setValue("verse", "");
     loadPassage(newRef);
   };
 
@@ -442,52 +505,103 @@ export function BibleReader({
                     </SelectContent>
                   </Select>
 
-                  <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1">
-                      <Select 
-                        value={selectedBook} 
-                        onValueChange={handleBookChange}
-                      >
-                        <SelectTrigger className={cn(
-                          isDarkTheme ? "border-white/20 bg-white/5 text-white" : ""
-                        )}>
-                          <SelectValue placeholder="Select Book" />
-                        </SelectTrigger>
-                        <SelectContent className={cn(
-                          "max-h-[300px]",
-                          isDarkTheme ? "bg-bible-darkblue border-white/10 text-white" : ""
-                        )}>
-                          {availableBooks.map((book) => (
-                            <SelectItem key={book} value={book}>
-                              {book}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  {/* New granular search form with individual book, chapter, verse inputs */}
+                  <div className="mt-4">
+                    <h3 className={cn(
+                      "text-sm font-medium mb-2",
+                      isDarkTheme ? "text-white/90" : "text-gray-700"
+                    )}>Search by Reference</h3>
+                    
+                    <form onSubmit={handleGranularSearchSubmit} className="space-y-4">
+                      {/* First row: Book and Chapter */}
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <div>
+                          <Select 
+                            value={selectedBook} 
+                            onValueChange={handleBookChange}
+                          >
+                            <SelectTrigger className={cn(
+                              isDarkTheme ? "border-white/20 bg-white/5 text-white" : ""
+                            )}>
+                              <Book className="h-4 w-4 mr-2 opacity-70" />
+                              <SelectValue placeholder="Select Book" />
+                            </SelectTrigger>
+                            <SelectContent className={cn(
+                              "max-h-[300px]",
+                              isDarkTheme ? "bg-bible-darkblue border-white/10 text-white" : ""
+                            )}>
+                              {availableBooks.map((book) => (
+                                <SelectItem key={book} value={book}>
+                                  {book}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div>
+                          <Select 
+                            value={selectedChapter?.toString() || ""} 
+                            onValueChange={handleChapterChange}
+                            disabled={!selectedBook || availableChapters.length === 0}
+                          >
+                            <SelectTrigger className={cn(
+                              isDarkTheme ? "border-white/20 bg-white/5 text-white" : ""
+                            )}>
+                              <TextCursor className="h-4 w-4 mr-2 opacity-70" />
+                              <SelectValue placeholder="Chapter" />
+                            </SelectTrigger>
+                            <SelectContent className={cn(
+                              "max-h-[200px]",
+                              isDarkTheme ? "bg-bible-darkblue border-white/10 text-white" : ""
+                            )}>
+                              {availableChapters.map((chapter) => (
+                                <SelectItem key={chapter} value={chapter.toString()}>
+                                  {chapter}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
                       
-                      <Select 
-                        value={selectedChapter?.toString() || ""} 
-                        onValueChange={handleChapterChange}
-                        disabled={!selectedBook || availableChapters.length === 0}
-                      >
-                        <SelectTrigger className={cn(
-                          isDarkTheme ? "border-white/20 bg-white/5 text-white" : ""
-                        )}>
-                          <SelectValue placeholder="Chapter" />
-                        </SelectTrigger>
-                        <SelectContent className={cn(
-                          "max-h-[200px]",
-                          isDarkTheme ? "bg-bible-darkblue border-white/10 text-white" : ""
-                        )}>
-                          {availableChapters.map((chapter) => (
-                            <SelectItem key={chapter} value={chapter.toString()}>
-                              {chapter}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {/* Second row: Verse and Search button */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="relative flex items-center">
+                          <Input
+                            placeholder="Verse (e.g., 16 or 16-20)"
+                            value={selectedVerse}
+                            onChange={(e) => handleVerseChange(e.target.value)}
+                            className={cn(
+                              isDarkTheme ? "border-white/20 bg-white/5 text-white placeholder:text-white/50" : ""
+                            )}
+                            disabled={!selectedBook || !selectedChapter}
+                          />
+                        </div>
+                        
+                        <Button 
+                          type="submit" 
+                          disabled={loading || !selectedBook}
+                          variant={isDarkTheme ? "outline" : "default"}
+                          className={cn(
+                            isDarkTheme ? "border-white/20 hover:bg-white/10 text-white" : "",
+                            "w-full md:w-auto"
+                          )}
+                        >
+                          <Search className="h-4 w-4 mr-2" />
+                          Find Passage
+                        </Button>
+                      </div>
+                    </form>
+                    
+                    {/* Alternative text input search */}
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <h3 className={cn(
+                        "text-sm font-medium mb-2",
+                        isDarkTheme ? "text-white/90" : "text-gray-700"
+                      )}>Quick Search</h3>
                       
-                      <div className="flex gap-2">
+                      <form onSubmit={handleSearchSubmit} className="flex gap-2">
                         <div className="relative flex-1">
                           <Search className={cn(
                             "absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4",
@@ -513,9 +627,9 @@ export function BibleReader({
                         >
                           <ArrowRight className="h-4 w-4" />
                         </Button>
-                      </div>
+                      </form>
                     </div>
-                  </form>
+                  </div>
                 </div>
               </CardContent>
             </CollapsibleContent>
