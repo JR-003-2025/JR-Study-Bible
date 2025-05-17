@@ -9,9 +9,23 @@ import {
   Sun, 
   Moon, 
   Book, 
-  ChevronRight 
+  ChevronRight,
+  Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { 
+  BibleApiProvider,
+  getBibleApiProvider, 
+  setBibleApiProvider,
+  getProviderDisplayName
+} from "@/services/bibleService";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import "../styles/bible-reader.css";
 
 const BibleReaderPage = () => {
@@ -20,6 +34,8 @@ const BibleReaderPage = () => {
   const reference = searchParams.get("reference") || "John 3:16";
   const [isImmersiveMode, setIsImmersiveMode] = useState<boolean>(false);
   const [isDarkTheme, setIsDarkTheme] = useState<boolean>(false);
+  const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [apiProvider, setApiProvider] = useState<BibleApiProvider>(getBibleApiProvider());
 
   const toggleImmersiveMode = () => {
     setIsImmersiveMode(!isImmersiveMode);
@@ -35,6 +51,16 @@ const BibleReaderPage = () => {
       document.body.classList.remove('dark-theme');
       document.documentElement.classList.remove('dark-mode');
     }
+  };
+  
+  const toggleSettings = () => {
+    setShowSettings(!showSettings);
+  };
+  
+  const handleProviderChange = (value: string) => {
+    const provider = value as BibleApiProvider;
+    setApiProvider(provider);
+    setBibleApiProvider(provider);
   };
 
   // Set up theme class on mount and cleanup on unmount
@@ -96,6 +122,20 @@ const BibleReaderPage = () => {
             <Button
               variant="ghost"
               size="sm"
+              onClick={toggleSettings}
+              title="Bible settings"
+              className={cn(
+                "transition-all",
+                isDarkTheme ? "text-white hover:bg-white/10" : ""
+              )}
+            >
+              <Settings className="h-4 w-4" />
+              <span className="ml-1 hidden sm:inline">Settings</span>
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={toggleImmersiveMode}
               title={isImmersiveMode ? "Exit immersive mode" : "Enter immersive mode"}
               className={cn(
@@ -130,6 +170,34 @@ const BibleReaderPage = () => {
           </div>
         </div>
         
+        {showSettings && (
+          <div className={cn(
+            "mb-4 p-4 rounded-md transition-all",
+            isDarkTheme ? "bg-bible-navy text-white" : "bg-bible-cream/50"
+          )}>
+            <h3 className="text-sm font-medium mb-2">Bible API Provider</h3>
+            <div className="flex items-center gap-2">
+              <Select value={apiProvider} onValueChange={handleProviderChange}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="api.bible">{getProviderDisplayName("api.bible")}</SelectItem>
+                  <SelectItem value="bible-api.com">{getProviderDisplayName("bible-api.com")}</SelectItem>
+                  <SelectItem value="youversion">{getProviderDisplayName("youversion")}</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-xs opacity-75">
+                {apiProvider === "youversion" 
+                  ? "May have CORS issues in some browsers" 
+                  : apiProvider === "bible-api.com" 
+                    ? "Simple and reliable alternative" 
+                    : "Primary Bible API"}
+              </span>
+            </div>
+          </div>
+        )}
+        
         <div className={cn(
           "transition-all duration-300",
           isImmersiveMode ? "px-4 md:px-8 lg:px-16 max-w-5xl mx-auto" : ""
@@ -138,6 +206,7 @@ const BibleReaderPage = () => {
             initialReference={reference} 
             isDarkTheme={isDarkTheme} 
             isImmersiveMode={isImmersiveMode} 
+            key={apiProvider} // Force re-render when provider changes
           />
         </div>
       </div>

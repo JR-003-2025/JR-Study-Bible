@@ -11,6 +11,12 @@ import {
   getYouVersionBibleVersions,
   checkYouVersionApiStatus
 } from "./youVersionApi";
+import {
+  DEFAULT_BIBLE_API_COM_VERSION,
+  fetchPassageFromBibleApiCom,
+  getBibleApiComVersions,
+  checkBibleApiComStatus
+} from "./bibleApiCom";
 
 // Types for Bible API
 export type BibleVerse = {
@@ -41,9 +47,9 @@ export type BibleVersion = {
 };
 
 // Bible API Provider Types
-export type BibleApiProvider = "api.bible" | "youversion";
+export type BibleApiProvider = "api.bible" | "youversion" | "bible-api.com";
 
-// Store the current Bible API provider - default to API.Bible since YouVersion has CORS issues
+// Store the current Bible API provider - default to API.Bible since it's most reliable
 let currentProvider: BibleApiProvider = "api.bible"; 
 
 // Function to switch between Bible API providers
@@ -54,6 +60,10 @@ export const setBibleApiProvider = (provider: BibleApiProvider) => {
   if (provider === "youversion") {
     toast.info("Switched to YouVersion API", {
       description: "Note: This API may have CORS limitations in some browsers"
+    });
+  } else if (provider === "bible-api.com") {
+    toast.info("Switched to Bible-API.com", {
+      description: "Using the simple and reliable Bible API"
     });
   } else {
     toast.info("Switched to API.Bible", {
@@ -132,6 +142,36 @@ export const fetchBiblePassage = async (
         // Fall back to API.Bible
         return await fetchPassageFromApi(reference, DEFAULT_BIBLE_VERSION);
       }
+    } else if (currentProvider === "bible-api.com") {
+      try {
+        const result = await fetchPassageFromBibleApiCom(reference, versionId || DEFAULT_BIBLE_API_COM_VERSION);
+        
+        // If Bible-API.com failed but didn't throw (returned error property)
+        if (result.error || result.passage.length === 0) {
+          console.warn("Bible-API.com failed, falling back to API.Bible:", result.error);
+          
+          toast.warning("Unable to get passage from Bible-API.com", {
+            description: "Falling back to API.Bible as backup",
+            duration: 5000
+          });
+          
+          // Fall back to API.Bible
+          return await fetchPassageFromApi(reference, DEFAULT_BIBLE_VERSION);
+        }
+        
+        return result;
+      } catch (bibleApiComError: any) {
+        console.error("Bible-API.com failed with error, falling back to API.Bible:", bibleApiComError);
+        
+        // Show error toast
+        toast.warning("Bible-API.com unavailable", {
+          description: "Falling back to API.Bible due to connection issues",
+          duration: 5000
+        });
+        
+        // Fall back to API.Bible
+        return await fetchPassageFromApi(reference, DEFAULT_BIBLE_VERSION);
+      }
     } else {
       return await fetchPassageFromApi(reference, versionId || DEFAULT_BIBLE_VERSION);
     }
@@ -154,6 +194,8 @@ export const getAvailableVersions = async (): Promise<BibleVersion[]> => {
   try {
     if (currentProvider === "youversion") {
       return getYouVersionBibleVersions();
+    } else if (currentProvider === "bible-api.com") {
+      return getBibleApiComVersions();
     } else {
       const versions = await getApiVersions();
       if (!versions || versions.length === 0) {
@@ -231,6 +273,8 @@ export const getAvailableChapters = async (
 function defaultBibleVersions(): BibleVersion[] {
   if (currentProvider === "youversion") {
     return getYouVersionBibleVersions();
+  } else if (currentProvider === "bible-api.com") {
+    return getBibleApiComVersions();
   }
   
   return [
@@ -243,12 +287,24 @@ function defaultBibleVersions(): BibleVersion[] {
 
 // Function to get default version ID based on current provider
 export const getDefaultVersionId = (): string => {
-  return currentProvider === "youversion" ? DEFAULT_YOUVERSION_VERSION : DEFAULT_BIBLE_VERSION;
+  if (currentProvider === "youversion") {
+    return DEFAULT_YOUVERSION_VERSION;
+  } else if (currentProvider === "bible-api.com") {
+    return DEFAULT_BIBLE_API_COM_VERSION;
+  } else {
+    return DEFAULT_BIBLE_VERSION;
+  }
 };
 
 // Check if a version ID belongs to YouVersion (simple 3-4 letter codes) or API.Bible (complex IDs)
 export const isYouVersionId = (versionId: string): boolean => {
   return /^[A-Z]{3,5}$/.test(versionId);
+};
+
+// Check if a version ID belongs to Bible-API.com (simple lowercase codes)
+export const isBibleApiComId = (versionId: string): boolean => {
+  const bibleApiComIds = getBibleApiComVersions().map(v => v.id);
+  return bibleApiComIds.includes(versionId);
 };
 
 // New function to detect if browser has CORS issues with YouVersion API
@@ -263,5 +319,24 @@ export const detectYouVersionCorsIssue = async (): Promise<boolean> => {
   } catch (error) {
     console.warn("YouVersion API CORS check failed:", error);
     return false;
+  }
+};
+
+// Check if Bible-API.com is accessible
+export const detectBibleApiComAccess = async (): Promise<boolean> => {
+  return await checkBibleApiComStatus();
+};
+
+// Get user-friendly provider name
+export const getProviderDisplayName = (provider: BibleApiProvider): string => {
+  switch (provider) {
+    case "api.bible":
+      return "API.Bible";
+    case "youversion":
+      return "YouVersion";
+    case "bible-api.com":
+      return "Bible-API.com";
+    default:
+      return "Unknown Provider";
   }
 };
