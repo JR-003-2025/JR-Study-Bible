@@ -43,12 +43,23 @@ export type BibleVersion = {
 // Bible API Provider Types
 export type BibleApiProvider = "api.bible" | "youversion";
 
-// Store the current Bible API provider
-let currentProvider: BibleApiProvider = "youversion"; // Default to YouVersion
+// Store the current Bible API provider - default to API.Bible since YouVersion has CORS issues
+let currentProvider: BibleApiProvider = "api.bible"; 
 
 // Function to switch between Bible API providers
 export const setBibleApiProvider = (provider: BibleApiProvider) => {
   currentProvider = provider;
+  
+  // Show information toast when switching providers
+  if (provider === "youversion") {
+    toast.info("Switched to YouVersion API", {
+      description: "Note: This API may have CORS limitations in some browsers"
+    });
+  } else {
+    toast.info("Switched to API.Bible", {
+      description: "Using the standard Bible API"
+    });
+  }
 };
 
 // Get the current Bible API provider
@@ -89,7 +100,38 @@ export const fetchBiblePassage = async (
   try {
     // Determine which API to use based on the current provider
     if (currentProvider === "youversion") {
-      return await fetchPassageFromYouVersion(reference, versionId || DEFAULT_YOUVERSION_VERSION);
+      try {
+        const result = await fetchPassageFromYouVersion(reference, versionId || DEFAULT_YOUVERSION_VERSION);
+        
+        // If YouVersion failed but didn't throw (returned error property)
+        if (result.error || result.passage.length === 0) {
+          console.warn("YouVersion API failed, falling back to API.Bible:", result.error);
+          
+          // Only show fallback toast for CORS or connection errors
+          if (result.error && (result.error.includes("CORS") || result.error.includes("fetch"))) {
+            toast.warning("Unable to connect to YouVersion", {
+              description: "Falling back to API.Bible due to connection issues",
+              duration: 5000
+            });
+          }
+          
+          // Fall back to API.Bible
+          return await fetchPassageFromApi(reference, DEFAULT_BIBLE_VERSION);
+        }
+        
+        return result;
+      } catch (youVersionError: any) {
+        console.error("YouVersion API failed with error, falling back to API.Bible:", youVersionError);
+        
+        // Show error toast for YouVersion error
+        toast.warning("YouVersion API unavailable", {
+          description: "Falling back to API.Bible due to connection issues",
+          duration: 5000
+        });
+        
+        // Fall back to API.Bible
+        return await fetchPassageFromApi(reference, DEFAULT_BIBLE_VERSION);
+      }
     } else {
       return await fetchPassageFromApi(reference, versionId || DEFAULT_BIBLE_VERSION);
     }
@@ -207,4 +249,19 @@ export const getDefaultVersionId = (): string => {
 // Check if a version ID belongs to YouVersion (simple 3-4 letter codes) or API.Bible (complex IDs)
 export const isYouVersionId = (versionId: string): boolean => {
   return /^[A-Z]{3,5}$/.test(versionId);
+};
+
+// New function to detect if browser has CORS issues with YouVersion API
+export const detectYouVersionCorsIssue = async (): Promise<boolean> => {
+  try {
+    // Try to make a simple status check request to YouVersion API
+    const response = await fetch("https://youversion-api.herokuapp.com/api/v1/status", {
+      method: "GET",
+      mode: "cors"
+    });
+    return response.ok;
+  } catch (error) {
+    console.warn("YouVersion API CORS check failed:", error);
+    return false;
+  }
 };

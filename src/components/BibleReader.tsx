@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +15,8 @@ import {
   getBibleApiProvider,
   BibleApiProvider,
   getDefaultVersionId,
-  isYouVersionId
+  isYouVersionId,
+  detectYouVersionCorsIssue
 } from "@/services/bibleService";
 import { 
   ChevronLeft, 
@@ -29,7 +29,8 @@ import {
   ChevronDown,
   AlertCircle,
   Settings,
-  TextCursor
+  TextCursor,
+  AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type BibleReaderProps = {
   initialReference?: string;
@@ -71,6 +73,7 @@ export function BibleReader({
   const [loadError, setLoadError] = useState<string>("");
   const [apiProvider, setApiProvider] = useState<BibleApiProvider>(getBibleApiProvider());
   const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [corsIssueDetected, setCorsIssueDetected] = useState<boolean>(false);
 
   // Form for granular reference inputs
   const form = useForm<ReferenceFormValues>({
@@ -80,6 +83,28 @@ export function BibleReader({
       verse: ""
     }
   });
+
+  // Check for CORS issues with YouVersion on mount
+  useEffect(() => {
+    const checkCorsAccess = async () => {
+      const hasAccess = await detectYouVersionCorsIssue();
+      setCorsIssueDetected(!hasAccess);
+      
+      // If CORS issues are detected and provider is YouVersion, warn the user
+      if (!hasAccess && getBibleApiProvider() === "youversion") {
+        console.warn("CORS issues detected with YouVersion API, setting API.Bible as default");
+        setBibleApiProvider("api.bible");
+        setApiProvider("api.bible");
+        
+        toast.warning("YouVersion API Access Restricted", {
+          description: "Automatically switched to API.Bible due to browser restrictions",
+          duration: 6000
+        });
+      }
+    };
+    
+    checkCorsAccess();
+  }, []);
 
   // Load available Bible versions
   useEffect(() => {
@@ -284,9 +309,17 @@ export function BibleReader({
     setBibleApiProvider(provider);
     setInitialLoading(true);
     
-    toast.info(`Switched to ${provider === "youversion" ? "YouVersion" : "API.Bible"} provider`, {
-      description: "Loading Bible content..."
-    });
+    // If switching to YouVersion with CORS issues detected, warn the user
+    if (provider === "youversion" && corsIssueDetected) {
+      toast.warning("YouVersion API Access Restricted", {
+        description: "This API may not work due to browser restrictions. Verse loading may fail.",
+        duration: 6000
+      });
+    } else {
+      toast.info(`Switched to ${provider === "youversion" ? "YouVersion" : "API.Bible"} provider`, {
+        description: "Loading Bible content..."
+      });
+    }
     
     // Reload versions and current passage with new provider
     const defaultVersion = getDefaultVersionId();
@@ -442,6 +475,29 @@ export function BibleReader({
                 isDarkTheme ? "text-white/90" : "text-gray-700"
               )}>Bible API Provider</h3>
               
+              {corsIssueDetected && (
+                <Alert className={cn(
+                  "mb-3",
+                  isDarkTheme 
+                    ? "bg-yellow-900/30 border-yellow-800 text-yellow-200" 
+                    : "bg-yellow-50 border-yellow-200"
+                )}>
+                  <AlertTriangle className={cn(
+                    "h-4 w-4", 
+                    isDarkTheme ? "text-yellow-400" : "text-yellow-600"
+                  )} />
+                  <AlertTitle className={cn(
+                    isDarkTheme ? "text-yellow-300" : "text-yellow-800"
+                  )}>
+                    Browser Restrictions Detected
+                  </AlertTitle>
+                  <AlertDescription className="text-sm">
+                    Your browser is blocking access to the YouVersion API due to CORS restrictions.
+                    We recommend using API.Bible for reliable operation.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <div className="flex gap-2">
                 <Button
                   size="sm"
@@ -449,10 +505,14 @@ export function BibleReader({
                   onClick={() => handleApiProviderChange("youversion")}
                   className={cn(
                     "flex-1",
-                    isDarkTheme && apiProvider !== "youversion" ? "border-white/20 text-white" : ""
+                    isDarkTheme && apiProvider !== "youversion" ? "border-white/20 text-white" : "",
+                    corsIssueDetected && apiProvider !== "youversion" ? "bg-yellow-100 hover:bg-yellow-200 text-yellow-800" : ""
                   )}
                 >
                   YouVersion
+                  {corsIssueDetected && apiProvider !== "youversion" && (
+                    <AlertTriangle className="h-3 w-3 ml-1 text-yellow-600" />
+                  )}
                 </Button>
                 <Button
                   size="sm"
@@ -471,7 +531,9 @@ export function BibleReader({
                 "text-xs mt-2",
                 isDarkTheme ? "text-white/60" : "text-gray-500"
               )}>
-                YouVersion provides better reliability and simpler version codes.
+                {corsIssueDetected 
+                  ? "YouVersion API is currently blocked by browser restrictions. Using API.Bible is recommended."
+                  : "YouVersion provides different Bible translations. API.Bible is more reliable for most users."}
               </p>
             </div>
           )}

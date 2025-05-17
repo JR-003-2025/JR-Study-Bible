@@ -27,6 +27,12 @@ const fetchFromYouVersionApi = async (endpoint: string): Promise<any> => {
     cache[endpoint] = data;
     return data;
   } catch (error: any) {
+    // Check specifically for CORS errors
+    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      console.error("YouVersion API CORS Error:", error);
+      throw new Error("YouVersion API unavailable due to CORS restrictions. Please try API.Bible instead.");
+    }
+    
     console.error("YouVersion API Error:", error);
     throw error;
   }
@@ -143,10 +149,19 @@ export const fetchPassageFromYouVersion = async (
     };
   } catch (error: any) {
     console.error("Error fetching Bible passage from YouVersion:", error);
+    
+    // Check if this is specifically a CORS error
+    const isCorsError = error.message && (
+      error.message.includes("CORS") || 
+      error.message.includes("Failed to fetch")
+    );
+    
     return {
       passage: [],
       reference: reference,
-      error: error.message || "Failed to load Bible passage"
+      error: isCorsError 
+        ? "Cannot access YouVersion API due to browser restrictions. Try using API.Bible instead."
+        : (error.message || "Failed to load Bible passage")
     };
   }
 };
