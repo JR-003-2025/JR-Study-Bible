@@ -21,10 +21,51 @@ export type BibleVersion = {
   abbreviation: string;
 };
 
+export type BibleApiProvider = "youversion" | "api.bible";
+
 // API.Bible configuration
 const API_KEY = "9f59126084a570d8108158ec5ad56802";
 const API_URL = "https://api.scripture.api.bible/v1";
 export const DEFAULT_VERSION = "de4e12af7f28f599-02"; // KJV
+
+// Store the current API provider
+let currentApiProvider: BibleApiProvider = "api.bible";
+
+// Function to set the Bible API provider
+export function setBibleApiProvider(provider: BibleApiProvider) {
+  currentApiProvider = provider;
+  // Clear cache when switching providers
+  Object.keys(cache).forEach(key => delete cache[key]);
+}
+
+// Function to get the current Bible API provider
+export function getBibleApiProvider(): BibleApiProvider {
+  return currentApiProvider;
+}
+
+// Function to get the default version ID based on the current provider
+export function getDefaultVersionId(): string {
+  return currentApiProvider === "youversion" 
+    ? "01b29f4b342acc35-01" // NIV for YouVersion
+    : DEFAULT_VERSION; // KJV for API.Bible
+}
+
+// Function to detect CORS issues with YouVersion API
+export async function detectYouVersionCorsIssue(): Promise<boolean> {
+  try {
+    const response = await fetch("https://www.youversion.com/api/v1/versions", {
+      method: "HEAD"
+    });
+    return true; // No CORS issues
+  } catch (error) {
+    return false; // CORS issues detected
+  }
+}
+
+// Function to check if a version ID is from YouVersion
+export function isYouVersionId(versionId: string): boolean {
+  return versionId.startsWith("YV_");
+}
 
 // Cache for API responses
 const cache: Record<string, any> = {};
