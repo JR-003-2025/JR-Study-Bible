@@ -91,14 +91,19 @@ const fetchFromApi = async (endpoint: string): Promise<any> => {
   }
 
   try {
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const url = `${API_URL}${endpoint}`;
+    console.log(`Fetching from API: ${url}`); // Debug log
+
+    const response = await fetch(url, {
       headers: {
         "api-key": API_KEY,
       },
     });
 
     if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`API Error (${response.status}):`, errorText); // Debug log
+      throw new Error(`API Error: ${response.status} - ${errorText || response.statusText}`);
     }
 
     const data = await response.json();
@@ -222,6 +227,8 @@ export const fetchBiblePassage = async (
   versionId: string = DEFAULT_VERSION
 ): Promise<BiblePassageResponse> => {
   try {
+    console.log(`Fetching passage: "${reference}" (Version: ${versionId})`); // Debug log
+    
     const { bookName, chapter, verseStart, verseEnd } = parseReference(reference);
     
     // Find the book ID
@@ -234,18 +241,24 @@ export const fetchBiblePassage = async (
       throw new Error(`Book "${bookName}" not found`);
     }
 
-    let endpoint;
-    if (verseStart) {
-      // Specific verse or range
-      endpoint = verseEnd
-        ? `/bibles/${versionId}/passages/${bookData.id}.${chapter}.${verseStart}-${verseEnd}`
-        : `/bibles/${versionId}/verses/${bookData.id}.${chapter}.${verseStart}`;
+    // Construct the endpoint based on whether we're fetching a verse, range, or chapter
+    let endpoint = `/bibles/${versionId}/`;
+    
+    if (verseStart && verseEnd) {
+      // Verse range
+      endpoint += `passages/${bookData.id}.${chapter}.${verseStart}-${bookData.id}.${chapter}.${verseEnd}`;
+    } else if (verseStart) {
+      // Single verse
+      endpoint += `verses/${bookData.id}.${chapter}.${verseStart}`;
     } else {
       // Whole chapter
-      endpoint = `/bibles/${versionId}/chapters/${bookData.id}.${chapter}`;
+      endpoint += `chapters/${bookData.id}.${chapter}`;
     }
 
+    // Add query parameters
     endpoint += "?content-type=html&include-notes=false&include-verse-numbers=true";
+    
+    console.log(`Constructed endpoint: ${endpoint}`); // Debug log
     
     const response = await fetchFromApi(endpoint);
     
@@ -266,13 +279,14 @@ export const fetchBiblePassage = async (
     };
   } catch (error: any) {
     console.error("Error fetching Bible passage:", error);
+    const errorMessage = error.message || "Please try again later";
     toast.error("Failed to load Bible passage", {
-      description: error.message || "Please try again later"
+      description: errorMessage
     });
     return {
       passage: [],
       reference: reference,
-      error: error.message
+      error: errorMessage
     };
   }
 };
@@ -284,13 +298,22 @@ export const parseReference = (reference: string): {
   verseStart?: number; 
   verseEnd?: number 
 } => {
-  const parts = reference.split(" ");
+  // Validate input
+  if (!reference || typeof reference !== 'string') {
+    throw new Error("Invalid reference: must be a non-empty string");
+  }
+
+  const parts = reference.trim().split(" ");
   if (parts.length < 2) {
     throw new Error("Invalid reference format. Expected 'Book Chapter:Verse'");
   }
   
   const chapterVersePart = parts[parts.length - 1];
   const bookName = parts.slice(0, parts.length - 1).join(" ");
+  
+  if (!bookName) {
+    throw new Error("Invalid reference: book name is required");
+  }
   
   let chapter: number;
   let verseStart: number | undefined;
@@ -304,15 +327,25 @@ export const parseReference = (reference: string): {
       const [start, end] = verseRange.split("-");
       verseStart = parseInt(start, 10);
       verseEnd = parseInt(end, 10);
+      
+      if (isNaN(verseStart) || isNaN(verseEnd)) {
+        throw new Error("Invalid verse range: both start and end must be numbers");
+      }
+      if (verseStart > verseEnd) {
+        throw new Error("Invalid verse range: start verse must be less than or equal to end verse");
+      }
     } else {
       verseStart = parseInt(verseRange, 10);
+      if (isNaN(verseStart)) {
+        throw new Error("Invalid verse number");
+      }
     }
   } else {
     chapter = parseInt(chapterVersePart, 10);
   }
   
-  if (isNaN(chapter)) {
-    throw new Error("Invalid chapter number");
+  if (isNaN(chapter) || chapter < 1) {
+    throw new Error("Invalid chapter number: must be a positive number");
   }
   
   return { bookName, chapter, verseStart, verseEnd };
