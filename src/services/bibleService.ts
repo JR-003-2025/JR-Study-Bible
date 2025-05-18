@@ -113,8 +113,10 @@ const fetchFromApi = async (endpoint: string): Promise<any> => {
 // Parse HTML content to extract verses
 const parseVersesFromHTML = (htmlContent: string, bookName: string, chapter: number): BibleVerse[] => {
   const verses: BibleVerse[] = [];
-  const verseRegex = /<span data-number="(\d+)".*?class="verse".*?>(.*?)<\/span>/g;
   const book_id = bookName.substring(0, 3).toUpperCase();
+  
+  // Updated regex pattern to match both data-number and data-verse-id attributes
+  const verseRegex = /<span\s+(?:data-number|data-verse-id)="(\d+)"[^>]*>(.*?)<\/span>/g;
   
   let match;
   while ((match = verseRegex.exec(htmlContent)) !== null) {
@@ -122,6 +124,9 @@ const parseVersesFromHTML = (htmlContent: string, bookName: string, chapter: num
     let text = match[2]
       .replace(/<\/?[^>]+(>|$)/g, "") // Remove HTML tags
       .replace(/&nbsp;/g, " ")        // Replace HTML entities
+      .replace(/&quot;/g, '"')        // Replace quote entities
+      .replace(/&apos;/g, "'")        // Replace apostrophe entities
+      .replace(/&amp;/g, "&")         // Replace ampersand entities
       .replace(/\s+/g, " ")           // Normalize whitespace
       .trim();
     
@@ -132,6 +137,28 @@ const parseVersesFromHTML = (htmlContent: string, bookName: string, chapter: num
       verse: verseNumber,
       text,
     });
+  }
+  
+  // If no verses found with span tags, try parsing the entire content as a single verse
+  if (verses.length === 0 && htmlContent.trim()) {
+    const cleanText = htmlContent
+      .replace(/<\/?[^>]+(>|$)/g, "")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&amp;/g, "&")
+      .replace(/\s+/g, " ")
+      .trim();
+    
+    if (cleanText) {
+      verses.push({
+        book_id,
+        book_name: bookName,
+        chapter,
+        verse: 1, // Default to verse 1 if no verse number found
+        text: cleanText,
+      });
+    }
   }
   
   return verses;
@@ -221,10 +248,16 @@ export const fetchBiblePassage = async (
     endpoint += "?content-type=html&include-notes=false&include-verse-numbers=true";
     
     const response = await fetchFromApi(endpoint);
+    
+    if (!response.data || !response.data.content) {
+      throw new Error(`No content returned for "${reference}"`);
+    }
+
     const verses = parseVersesFromHTML(response.data.content, bookName, chapter);
 
     if (verses.length === 0) {
-      throw new Error(`No verses found for "${reference}"`);
+      console.error("Raw HTML content:", response.data.content);
+      throw new Error(`Failed to parse verses from content for "${reference}"`);
     }
 
     return {
