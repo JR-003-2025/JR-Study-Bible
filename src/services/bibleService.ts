@@ -21,7 +21,7 @@ export type BibleVersion = {
   abbreviation: string;
 };
 
-export type BibleApiProvider = "youversion" | "api.bible";
+export type BibleApiProvider = "youversion" | "api.bible" | "bible-api.com";
 
 // API.Bible configuration
 const API_KEY = "9f59126084a570d8108158ec5ad56802";
@@ -30,6 +30,20 @@ export const DEFAULT_VERSION = "de4e12af7f28f599-02"; // KJV
 
 // Store the current API provider
 let currentApiProvider: BibleApiProvider = "api.bible";
+
+// Function to get display name for Bible API provider
+export const getProviderDisplayName = (provider: BibleApiProvider): string => {
+  switch (provider) {
+    case "api.bible":
+      return "API.Bible";
+    case "youversion":
+      return "YouVersion";
+    case "bible-api.com":
+      return "Bible API";
+    default:
+      return "Unknown Provider";
+  }
+};
 
 // Function to set the Bible API provider
 export function setBibleApiProvider(provider: BibleApiProvider) {
