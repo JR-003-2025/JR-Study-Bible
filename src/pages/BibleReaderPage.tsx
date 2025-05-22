@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -13,12 +12,7 @@ import {
   Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { 
-  BibleApiProvider,
-  getBibleApiProvider, 
-  setBibleApiProvider,
-  getProviderDisplayName
-} from "@/services/bibleService";
+// Using only local Bible services now
 import { 
   Select,
   SelectContent,
@@ -35,8 +29,11 @@ const BibleReaderPage = () => {
   const [isImmersiveMode, setIsImmersiveMode] = useState<boolean>(false);
   const [isDarkTheme, setIsDarkTheme] = useState<boolean>(false);
   const [showSettings, setShowSettings] = useState<boolean>(false);
-  const [apiProvider, setApiProvider] = useState<BibleApiProvider>(getBibleApiProvider());
-
+  
+  const toggleSettings = () => {
+    setShowSettings(!showSettings);
+  };
+  
   const toggleImmersiveMode = () => {
     setIsImmersiveMode(!isImmersiveMode);
   };
@@ -53,15 +50,9 @@ const BibleReaderPage = () => {
     }
   };
   
-  const toggleSettings = () => {
-    setShowSettings(!showSettings);
-  };
+  // All settings are now handled in the BibleReader component
   
-  const handleProviderChange = (value: string) => {
-    const provider = value as BibleApiProvider;
-    setApiProvider(provider);
-    setBibleApiProvider(provider);
-  };
+  // No provider changes needed since we're using local data only
 
   // Set up theme class on mount and cleanup on unmount
   useEffect(() => {
@@ -170,33 +161,7 @@ const BibleReaderPage = () => {
           </div>
         </div>
         
-        {showSettings && (
-          <div className={cn(
-            "mb-4 p-4 rounded-md transition-all",
-            isDarkTheme ? "bg-bible-navy text-white" : "bg-bible-cream/50"
-          )}>
-            <h3 className="text-sm font-medium mb-2">Bible API Provider</h3>
-            <div className="flex items-center gap-2">
-              <Select value={apiProvider} onValueChange={handleProviderChange}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select provider" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="api.bible">{getProviderDisplayName("api.bible")}</SelectItem>
-                  <SelectItem value="bible-api.com">{getProviderDisplayName("bible-api.com")}</SelectItem>
-                  <SelectItem value="youversion">{getProviderDisplayName("youversion")}</SelectItem>
-                </SelectContent>
-              </Select>
-              <span className="text-xs opacity-75">
-                {apiProvider === "youversion" 
-                  ? "May have CORS issues in some browsers" 
-                  : apiProvider === "bible-api.com" 
-                    ? "Simple and reliable alternative" 
-                    : "Primary Bible API"}
-              </span>
-            </div>
-          </div>
-        )}
+        {/* Settings are now handled in the BibleReader component */}
         
         <div className={cn(
           "transition-all duration-300",
@@ -205,8 +170,8 @@ const BibleReaderPage = () => {
           <BibleReader 
             initialReference={reference} 
             isDarkTheme={isDarkTheme} 
-            isImmersiveMode={isImmersiveMode} 
-            key={apiProvider} // Force re-render when provider changes
+            isImmersiveMode={isImmersiveMode}
+            showSettings={showSettings}
           />
         </div>
       </div>

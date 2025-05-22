@@ -44,6 +44,7 @@ type BibleReaderProps = {
   initialReference?: string;
   isDarkTheme?: boolean;
   isImmersiveMode?: boolean;
+  showSettings?: boolean;
 };
 
 type ReferenceFormValues = {
@@ -55,7 +56,8 @@ type ReferenceFormValues = {
 export function BibleReader({ 
   initialReference = "John 3:16", 
   isDarkTheme = false,
-  isImmersiveMode = false
+  isImmersiveMode = false,
+  showSettings = false
 }: BibleReaderProps) {
   const [reference, setReference] = useState<string>(initialReference);
   const [inputReference, setInputReference] = useState<string>(initialReference);
@@ -71,9 +73,9 @@ export function BibleReader({
   const [selectedVersion, setSelectedVersion] = useState<string>(getDefaultVersionId());
   const [isControlsOpen, setIsControlsOpen] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string>("");
-  const [apiProvider, setApiProvider] = useState<BibleApiProvider>(getBibleApiProvider());
-  const [showSettings, setShowSettings] = useState<boolean>(false);
-  const [corsIssueDetected, setCorsIssueDetected] = useState<boolean>(false);
+  // Use prop value if provided, otherwise use internal state
+  const [internalShowSettings, setInternalShowSettings] = useState<boolean>(false);
+  const effectiveShowSettings = typeof showSettings === 'boolean' ? showSettings : internalShowSettings;
 
   // Form for granular reference inputs
   const form = useForm<ReferenceFormValues>({
@@ -84,27 +86,7 @@ export function BibleReader({
     }
   });
 
-  // Check for CORS issues with YouVersion on mount
-  useEffect(() => {
-    const checkCorsAccess = async () => {
-      const hasAccess = await detectYouVersionCorsIssue();
-      setCorsIssueDetected(!hasAccess);
-      
-      // If CORS issues are detected and provider is YouVersion, warn the user
-      if (!hasAccess && getBibleApiProvider() === "youversion") {
-        console.warn("CORS issues detected with YouVersion API, setting API.Bible as default");
-        setBibleApiProvider("api.bible");
-        setApiProvider("api.bible");
-        
-        toast.warning("YouVersion API Access Restricted", {
-          description: "Automatically switched to API.Bible due to browser restrictions",
-          duration: 6000
-        });
-      }
-    };
-    
-    checkCorsAccess();
-  }, []);
+  // No need to check for CORS issues since we're using local data only
 
   // Load available Bible versions
   useEffect(() => {
@@ -113,7 +95,7 @@ export function BibleReader({
         const versions = await getAvailableVersions();
         setBibleVersions(versions);
         
-        // Set default version based on current provider
+        // Set default version
         setSelectedVersion(getDefaultVersionId());
       } catch (error) {
         console.error("Failed to load Bible versions:", error);
@@ -124,7 +106,7 @@ export function BibleReader({
     };
     
     loadVersions();
-  }, [apiProvider]); // Reload when API provider changes
+  }, []); // Only load versions once on mount
 
   // Load available books when version changes
   useEffect(() => {
@@ -242,11 +224,6 @@ export function BibleReader({
     loadPassage(newRef);
   };
 
-  const handleVersionChange = (versionId: string) => {
-    setSelectedVersion(versionId);
-    // This will trigger the useEffect that reloads the passage with the new version
-  };
-
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     loadPassage(inputReference);
@@ -303,27 +280,9 @@ export function BibleReader({
     });
   };
 
-  // Handle API provider change
-  const handleApiProviderChange = (provider: BibleApiProvider) => {
-    setApiProvider(provider);
-    setBibleApiProvider(provider);
-    setInitialLoading(true);
-    
-    // If switching to YouVersion with CORS issues detected, warn the user
-    if (provider === "youversion" && corsIssueDetected) {
-      toast.warning("YouVersion API Access Restricted", {
-        description: "This API may not work due to browser restrictions. Verse loading may fail.",
-        duration: 6000
-      });
-    } else {
-      toast.info(`Switched to ${provider === "youversion" ? "YouVersion" : "API.Bible"} provider`, {
-        description: "Loading Bible content..."
-      });
-    }
-    
-    // Reload versions and current passage with new provider
-    const defaultVersion = getDefaultVersionId();
-    setSelectedVersion(defaultVersion);
+  // No API provider changes needed since we're using local data only
+  const handleVersionChange = (versionId: string) => {
+    setSelectedVersion(versionId);
     
     // The version change will trigger a reload of the passage
   };
@@ -400,19 +359,19 @@ export function BibleReader({
                     <Button 
                       variant={isDarkTheme ? "outline" : "ghost"} 
                       size="sm"
-                      onClick={() => setShowSettings(!showSettings)}
+                      onClick={() => setInternalShowSettings(!effectiveShowSettings)}
                       className={cn(
                         isDarkTheme ? "border-white/20 hover:bg-white/10 text-white" : "",
                         "transition-transform hover:scale-105",
-                        showSettings ? "bg-secondary" : ""
+                        effectiveShowSettings ? "bg-secondary" : ""
                       )}
                     >
                       <Settings className="h-4 w-4" />
-                      <span className="sr-only">API Settings</span>
+                      <span className="sr-only">Bible Settings</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Bible API Settings</p>
+                    <p>Bible Settings</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -464,8 +423,8 @@ export function BibleReader({
             </div>
           </div>
           
-          {/* API Provider Settings */}
-          {showSettings && (
+          {/* Version Settings */}
+          {effectiveShowSettings && (
             <div className={cn(
               "mt-4 p-4 rounded-md animate-fade-in",
               isDarkTheme ? "bg-white/5" : "bg-gray-50"
@@ -473,67 +432,12 @@ export function BibleReader({
               <h3 className={cn(
                 "text-sm font-medium mb-3",
                 isDarkTheme ? "text-white/90" : "text-gray-700"
-              )}>Bible API Provider</h3>
-              
-              {corsIssueDetected && (
-                <Alert className={cn(
-                  "mb-3",
-                  isDarkTheme 
-                    ? "bg-yellow-900/30 border-yellow-800 text-yellow-200" 
-                    : "bg-yellow-50 border-yellow-200"
-                )}>
-                  <AlertTriangle className={cn(
-                    "h-4 w-4", 
-                    isDarkTheme ? "text-yellow-400" : "text-yellow-600"
-                  )} />
-                  <AlertTitle className={cn(
-                    isDarkTheme ? "text-yellow-300" : "text-yellow-800"
-                  )}>
-                    Browser Restrictions Detected
-                  </AlertTitle>
-                  <AlertDescription className="text-sm">
-                    Your browser is blocking access to the YouVersion API due to CORS restrictions.
-                    We recommend using API.Bible for reliable operation.
-                  </AlertDescription>
-                </Alert>
-              )}
-              
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant={apiProvider === "youversion" ? "default" : "outline"}
-                  onClick={() => handleApiProviderChange("youversion")}
-                  className={cn(
-                    "flex-1",
-                    isDarkTheme && apiProvider !== "youversion" ? "border-white/20 text-white" : "",
-                    corsIssueDetected && apiProvider !== "youversion" ? "bg-yellow-100 hover:bg-yellow-200 text-yellow-800" : ""
-                  )}
-                >
-                  YouVersion
-                  {corsIssueDetected && apiProvider !== "youversion" && (
-                    <AlertTriangle className="h-3 w-3 ml-1 text-yellow-600" />
-                  )}
-                </Button>
-                <Button
-                  size="sm"
-                  variant={apiProvider === "api.bible" ? "default" : "outline"}
-                  onClick={() => handleApiProviderChange("api.bible")}
-                  className={cn(
-                    "flex-1",
-                    isDarkTheme && apiProvider !== "api.bible" ? "border-white/20 text-white" : ""
-                  )}
-                >
-                  API.Bible
-                </Button>
-              </div>
-              
+              )}>Bible Version</h3>
               <p className={cn(
                 "text-xs mt-2",
                 isDarkTheme ? "text-white/60" : "text-gray-500"
               )}>
-                {corsIssueDetected 
-                  ? "YouVersion API is currently blocked by browser restrictions. Using API.Bible is recommended."
-                  : "YouVersion provides different Bible translations. API.Bible is more reliable for most users."}
+                Access the Bible offline with KJV, ASV, and BBE versions
               </p>
             </div>
           )}

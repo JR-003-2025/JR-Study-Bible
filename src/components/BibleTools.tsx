@@ -1,11 +1,10 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GroqRequestParams, fetchGroqResponse } from "@/services/groqService";
+import { BibleRequestParams, BibleResponse, handleBibleRequest } from "@/services/groqService";
 import { Loader2 } from "lucide-react";
 import { ResponseActions } from "./ResponseActions";
 
@@ -23,12 +22,12 @@ export function ExegesisTool() {
     setResult("");
 
     try {
-      const params: GroqRequestParams = {
+      const params: BibleRequestParams = {
         task: "exegesis",
         content: passage,
       };
 
-      const response = await fetchGroqResponse(params);
+      const response = await handleBibleRequest(params);
       if (response.error) {
         throw new Error(response.error);
       }
@@ -121,12 +120,12 @@ export function BibleQATool() {
     setAnswer("");
 
     try {
-      const params: GroqRequestParams = {
+      const params: BibleRequestParams = {
         task: "qa",
         content: question,
       };
 
-      const response = await fetchGroqResponse(params);
+      const response = await handleBibleRequest(params);
       if (response.error) {
         throw new Error(response.error);
       }
@@ -205,12 +204,12 @@ export function SermonTool() {
     setSermon("");
 
     try {
-      const params: GroqRequestParams = {
+      const params: BibleRequestParams = {
         task: "sermon",
         content: topic,
       };
 
-      const response = await fetchGroqResponse(params);
+      const response = await handleBibleRequest(params);
       if (response.error) {
         throw new Error(response.error);
       }
@@ -297,12 +296,12 @@ export function BibleSearchTool() {
     setSearchResults("");
 
     try {
-      const params: GroqRequestParams = {
+      const params: BibleRequestParams = {
         task: "search",
         content: keyword,
       };
 
-      const response = await fetchGroqResponse(params);
+      const response = await handleBibleRequest(params);
       if (response.error) {
         throw new Error(response.error);
       }
