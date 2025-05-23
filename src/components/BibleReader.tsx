@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { fetchBiblePassage, getAvailableVersions, getDefaultVersionId } from "@/services/bibleService";
-import { BibleVerse, BibleVersion } from "@/services/types";
+import { BiblePassageVerse, BibleVersion } from "@/services/types";
 import { 
   getAvailableBooks,
   getAvailableChapters
@@ -63,7 +63,7 @@ export function BibleReader({
 
   // Data state
   const [bibleVersions, setBibleVersions] = useState<BibleVersion[]>([]);
-  const [verses, setVerses] = useState<BibleVerse[]>([]);
+  const [verses, setVerses] = useState<BiblePassageVerse[]>([]);
   const [availableBooks, setAvailableBooks] = useState<string[]>([]);
   const [availableChapters, setAvailableChapters] = useState<number[]>([]);
   const [inputReference, setInputReference] = useState<string>(initialReference);
