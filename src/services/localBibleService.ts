@@ -60,3 +60,19 @@ export const getPassage = async (reference: string, version: string = 'kjv'): Pr
     };
   }
 };
+
+export const getAvailableBooks = async (version: string = 'kjv'): Promise<string[]> => {
+  const bibleData = bibleVersions[version];
+  if (!bibleData) {
+    throw new Error(`Bible version ${version} not found`);
+  }
+  return Object.keys(bibleData);
+};
+
+export const getAvailableChapters = async (book: string, version: string = 'kjv'): Promise<number[]> => {
+  const bibleData = bibleVersions[version];
+  if (!bibleData || !bibleData[book]) {
+    throw new Error(`Book ${book} not found in version ${version}`);
+  }
+  return Object.keys(bibleData[book]).map(Number);
+};

@@ -7,17 +7,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   BibleVerse, 
   fetchBiblePassage, 
-  getAvailableBooks, 
-  getAvailableChapters,
   getAvailableVersions,
   BibleVersion,
-  setBibleApiProvider,
-  getBibleApiProvider,
-  BibleApiProvider,
-  getDefaultVersionId,
-  isYouVersionId,
-  detectYouVersionCorsIssue
+  getDefaultVersionId
 } from "@/services/bibleService";
+import { 
+  getAvailableBooks,
+  getAvailableChapters
+} from "@/services/localBibleService";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -27,10 +24,9 @@ import {
   Search,
   ArrowRight,
   ChevronDown,
-  AlertCircle,
   Settings,
   TextCursor,
-  AlertTriangle
+  AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -38,7 +34,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type BibleReaderProps = {
   initialReference?: string;
@@ -54,30 +49,30 @@ type ReferenceFormValues = {
 };
 
 export function BibleReader({ 
-  initialReference = "John 3:16", 
+  initialReference = "Genesis 1:1",
   isDarkTheme = false,
   isImmersiveMode = false,
-  showSettings = false
+  showSettings = true
 }: BibleReaderProps) {
+  // Base state
   const [reference, setReference] = useState<string>(initialReference);
-  const [inputReference, setInputReference] = useState<string>(initialReference);
-  const [verses, setVerses] = useState<BibleVerse[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [initialLoading, setInitialLoading] = useState<boolean>(true);
-  const [availableBooks, setAvailableBooks] = useState<string[]>([]);
+  const [selectedVersion, setSelectedVersion] = useState(getDefaultVersionId());
   const [selectedBook, setSelectedBook] = useState<string>("");
-  const [availableChapters, setAvailableChapters] = useState<number[]>([]);
-  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<number>(1);
   const [selectedVerse, setSelectedVerse] = useState<string>("");
-  const [bibleVersions, setBibleVersions] = useState<BibleVersion[]>([]);
-  const [selectedVersion, setSelectedVersion] = useState<string>(getDefaultVersionId());
-  const [isControlsOpen, setIsControlsOpen] = useState<boolean>(true);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [loadError, setLoadError] = useState<string>("");
-  // Use prop value if provided, otherwise use internal state
-  const [internalShowSettings, setInternalShowSettings] = useState<boolean>(false);
-  const effectiveShowSettings = typeof showSettings === 'boolean' ? showSettings : internalShowSettings;
+  const [isControlsOpen, setIsControlsOpen] = useState(true);
+  const [effectiveShowSettings, setInternalShowSettings] = useState(showSettings);
 
-  // Form for granular reference inputs
+  // Data state
+  const [bibleVersions, setBibleVersions] = useState<BibleVersion[]>([]);
+  const [verses, setVerses] = useState<BibleVerse[]>([]);
+  const [availableBooks, setAvailableBooks] = useState<string[]>([]);
+  const [availableChapters, setAvailableChapters] = useState<number[]>([]);
+  const [inputReference, setInputReference] = useState<string>(initialReference);
+
   const form = useForm<ReferenceFormValues>({
     defaultValues: {
       book: "",
@@ -85,8 +80,6 @@ export function BibleReader({
       verse: ""
     }
   });
-
-  // No need to check for CORS issues since we're using local data only
 
   // Load available Bible versions
   useEffect(() => {
