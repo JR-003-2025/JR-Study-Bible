@@ -4,13 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  BibleVerse, 
-  fetchBiblePassage, 
-  getAvailableVersions,
-  BibleVersion,
-  getDefaultVersionId
-} from "@/services/bibleService";
+import { fetchBiblePassage, getAvailableVersions, getDefaultVersionId } from "@/services/bibleService";
+import { BibleVerse, BibleVersion } from "@/services/types";
 import { 
   getAvailableBooks,
   getAvailableChapters

@@ -1,25 +1,6 @@
 import { getPassage, availableVersions } from './localBibleService';
 
-// Types for Bible API
-export type BibleVerse = {
-  book_id: string;
-  book_name: string;
-  chapter: number;
-  verse: number;
-  text: string;
-};
-
-export type BiblePassageResponse = {
-  passage: BibleVerse[];
-  reference: string;
-  error?: string;
-};
-
-export type BibleVersion = {
-  id: string;
-  name: string;
-  abbreviation: string;
-};
+import { BibleVerse, BiblePassageResponse, BibleVersion } from './types';
 
 export const getDefaultVersionId = () => 'kjv';
 

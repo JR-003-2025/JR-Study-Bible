@@ -1,12 +1,12 @@
-import { BibleVerse, BiblePassageResponse, BibleVersion } from './bibleService';
+import { BibleData, BiblePassageResponse, BibleVersion, BiblePassageVerse } from './types';
 import kjvData from '../../bible_data/kjv.json';
 import asvData from '../../bible_data/asv.json';
 import bbeData from '../../bible_data/bbe.json';
 
-const bibleVersions: { [key: string]: any } = {
-  'kjv': kjvData,
-  'asv': asvData,
-  'bbe': bbeData
+const bibleVersions: { [key: string]: BibleData } = {
+  'kjv': kjvData as BibleData,
+  'asv': asvData as BibleData,
+  'bbe': bbeData as BibleData
 };
 
 export const availableVersions: BibleVersion[] = [
@@ -88,11 +88,25 @@ const normalizeBookName = (book: string): string => {
     'rev': 'Revelation'
   };
 
-  // Normalize the input
+  // Normalize the input by removing spaces and converting to lowercase
   const normalized = book.toLowerCase().replace(/\s+/g, '');
   
   // Check for direct match in mappings
-  return bookMappings[normalized] || book;
+  const bookName = bookMappings[normalized];
+  if (bookName) return bookName;
+
+  // If no match found, try to find a fuzzy match
+  const matches = Object.values(bookMappings).filter(name => 
+    name.toLowerCase().includes(normalized) || normalized.includes(name.toLowerCase())
+  );
+
+  return matches[0] || book;
+};
+
+const findBook = (bibleData: BibleData, bookName: string): { book: any; normalizedName: string } | null => {
+  const normalizedBook = normalizeBookName(bookName);
+  const book = bibleData.books.find(b => b.name === normalizedBook);
+  return book ? { book, normalizedName: normalizedBook } : null;
 };
 
 export const getPassage = async (reference: string, version: string = 'kjv'): Promise<BiblePassageResponse> => {
@@ -116,12 +130,28 @@ export const getPassage = async (reference: string, version: string = 'kjv'): Pr
     }
 
     const [book, chapterVerse] = parts;
-    const normalizedBook = normalizeBookName(book);
-    
+    const bibleData = bibleVersions[version.toLowerCase()];
+    if (!bibleData) {
+      return {
+        passage: [],
+        reference,
+        error: `Bible version "${version}" not found`
+      };
+    }
+
+    const bookData = findBook(bibleData, book);
+    if (!bookData) {
+      return {
+        passage: [],
+        reference,
+        error: `Book "${book}" not found`
+      };
+    }
+
     // Handle chapter-only references (e.g., "John 3")
     if (!chapterVerse.includes(':')) {
-      const chapter = parseInt(chapterVerse, 10);
-      if (isNaN(chapter)) {
+      const chapterNum = parseInt(chapterVerse, 10);
+      if (isNaN(chapterNum)) {
         return {
           passage: [],
           reference,
@@ -129,29 +159,26 @@ export const getPassage = async (reference: string, version: string = 'kjv'): Pr
         };
       }
 
-      const bibleData = bibleVersions[version.toLowerCase()];
-      if (!bibleData?.[normalizedBook]?.[chapter]) {
+      const chapter = bookData.book.chapters.find(c => c.chapter === chapterNum);
+      if (!chapter) {
         return {
           passage: [],
           reference,
-          error: `Chapter ${chapter} not found in ${normalizedBook}`
+          error: `Chapter ${chapterNum} not found in ${bookData.normalizedName}`
         };
       }
 
-      // Return all verses in the chapter
-      const verses: BibleVerse[] = Object.entries(bibleData[normalizedBook][chapter])
-        .map(([verseNum, text]) => ({
-          book_id: normalizedBook,
-          book_name: normalizedBook,
-          chapter,
-          verse: parseInt(verseNum, 10),
-          text: text as string
-        }))
-        .sort((a, b) => a.verse - b.verse);
+      const verses: BiblePassageVerse[] = chapter.verses.map(v => ({
+        book_id: bookData.normalizedName,
+        book_name: bookData.normalizedName,
+        chapter: chapterNum,
+        verse: v.verse,
+        text: v.text
+      }));
 
       return {
         passage: verses,
-        reference: `${normalizedBook} ${chapter}`
+        reference: `${bookData.normalizedName} ${chapterNum}`
       };
     }
 
@@ -167,35 +194,18 @@ export const getPassage = async (reference: string, version: string = 'kjv'): Pr
       };
     }
 
-    const bibleData = bibleVersions[version.toLowerCase()];
-    if (!bibleData) {
-      return {
-        passage: [],
-        reference,
-        error: `Bible version "${version}" not found`
-      };
-    }
-
-    const bookData = bibleData[normalizedBook];
-    if (!bookData) {
-      return {
-        passage: [],
-        reference,
-        error: `Book "${normalizedBook}" not found`
-      };
-    }
-
-    const chapterData = bookData[chapterNum];
+    const chapterData = bookData.book.chapters.find(c => c.chapter === chapterNum);
     if (!chapterData) {
       return {
         passage: [],
         reference,
-        error: `Chapter ${chapterNum} not found in ${normalizedBook}`
+        error: `Chapter ${chapterNum} not found in ${bookData.normalizedName}`
       };
     }
 
+    const verses: BiblePassageVerse[] = [];
+
     // Handle verse ranges (e.g., "16-20")
-    const verses: BibleVerse[] = [];
     if (verseRange.includes('-')) {
       const [start, end] = verseRange.split('-').map(v => parseInt(v, 10));
       if (isNaN(start) || isNaN(end)) {
@@ -207,13 +217,14 @@ export const getPassage = async (reference: string, version: string = 'kjv'): Pr
       }
 
       for (let v = start; v <= end; v++) {
-        if (chapterData[v]) {
+        const verse = chapterData.verses.find(verse => verse.verse === v);
+        if (verse) {
           verses.push({
-            book_id: normalizedBook,
-            book_name: normalizedBook,
+            book_id: bookData.normalizedName,
+            book_name: bookData.normalizedName,
             chapter: chapterNum,
             verse: v,
-            text: chapterData[v]
+            text: verse.text
           });
         }
       }
@@ -227,27 +238,27 @@ export const getPassage = async (reference: string, version: string = 'kjv'): Pr
         };
       }
 
-      const verseText = chapterData[verseNum];
-      if (!verseText) {
+      const verse = chapterData.verses.find(v => v.verse === verseNum);
+      if (!verse) {
         return {
           passage: [],
           reference,
-          error: `Verse ${verseNum} not found in ${normalizedBook} ${chapterNum}`
+          error: `Verse ${verseNum} not found in ${bookData.normalizedName} ${chapterNum}`
         };
       }
 
       verses.push({
-        book_id: normalizedBook,
-        book_name: normalizedBook,
+        book_id: bookData.normalizedName,
+        book_name: bookData.normalizedName,
         chapter: chapterNum,
         verse: verseNum,
-        text: verseText
+        text: verse.text
       });
     }
 
     return {
       passage: verses,
-      reference: `${normalizedBook} ${chapter}:${verseRange}`
+      reference: `${bookData.normalizedName} ${chapter}:${verseRange}`
     };
 
   } catch (error) {
@@ -264,14 +275,19 @@ export const getAvailableBooks = async (version: string = 'kjv'): Promise<string
   if (!bibleData) {
     throw new Error(`Bible version ${version} not found`);
   }
-  return Object.keys(bibleData).sort();
+  return bibleData.books.map(book => book.name).sort();
 };
 
 export const getAvailableChapters = async (book: string, version: string = 'kjv'): Promise<number[]> => {
-  const normalizedBook = normalizeBookName(book);
   const bibleData = bibleVersions[version.toLowerCase()];
-  if (!bibleData || !bibleData[normalizedBook]) {
-    throw new Error(`Book ${normalizedBook} not found in version ${version}`);
+  if (!bibleData) {
+    throw new Error(`Bible version ${version} not found`);
   }
-  return Object.keys(bibleData[normalizedBook]).map(Number).sort((a, b) => a - b);
+
+  const bookData = findBook(bibleData, book);
+  if (!bookData) {
+    throw new Error(`Book ${book} not found in version ${version}`);
+  }
+
+  return bookData.book.chapters.map(chapter => chapter.chapter).sort((a, b) => a - b);
 };
