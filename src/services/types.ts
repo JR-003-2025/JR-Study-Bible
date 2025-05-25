@@ -39,3 +39,42 @@ export interface BibleVersion {
   name: string;
   abbreviation: string;
 }
+
+export interface BibleSearchResult {
+  reference: string;
+  book: string;
+  chapter: number;
+  verse: number;
+  text: string;
+  score: number;
+}
+
+export interface SearchQuery {
+  text: string;
+  version: string;
+  limit?: number;
+}
+
+// Reading Plan Types
+export interface ReadingPlanDay {
+  day: number;
+  references: string[];
+  isCompleted?: boolean;
+}
+
+export interface ReadingPlan {
+  id: string;
+  name: string;
+  description: string;
+  duration: number;  // in days
+  readings: ReadingPlanDay[];
+  startDate?: string;
+  currentDay?: number;
+}
+
+export interface UserProgress {
+  planId: string;
+  completedDays: number[];
+  startDate: string;
+  lastReadDate?: string;
+}

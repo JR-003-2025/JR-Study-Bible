@@ -1,46 +1,63 @@
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { fetchBiblePassage, getAvailableVersions, getDefaultVersionId } from "@/services/bibleService";
-import { BiblePassageVerse, BibleVersion } from "@/services/types";
+import { useForm } from "react-hook-form";
 import { 
-  getAvailableBooks,
-  getAvailableChapters
-} from "@/services/localBibleService";
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Bookmark, 
+  Loader2, 
+  AlertCircle, 
   Book, 
-  Loader2,
-  Search,
+  Bookmark, 
+  ChevronDown, 
+  ChevronLeft,
+  ChevronRight, 
   ArrowRight,
-  ChevronDown,
-  Settings,
   TextCursor,
-  AlertCircle
+  Search,
+  Settings
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { 
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger
+} from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
+import { 
+  getDefaultVersionId, 
+  getAvailableVersions, 
+  getAvailableBooks,
+  getAvailableChapters,
+  fetchBiblePassage 
+} from "@/services/bibleService";
+import { Skeleton } from "@/components/ui/skeleton";
+import { BibleVersion, BiblePassageVerse } from "@/services/types";
+
+interface ReferenceFormValues {
+  book: string;
+  chapter: string;
+  verse: string;
+}
 
 type BibleReaderProps = {
   initialReference?: string;
   isDarkTheme?: boolean;
   isImmersiveMode?: boolean;
   showSettings?: boolean;
-};
-
-type ReferenceFormValues = {
-  book: string;
-  chapter: string;
-  verse: string;
 };
 
 export function BibleReader({ 
@@ -50,7 +67,6 @@ export function BibleReader({
   showSettings = true
 }: BibleReaderProps) {
   // Base state
-  const [reference, setReference] = useState<string>(initialReference);
   const [selectedVersion, setSelectedVersion] = useState(getDefaultVersionId());
   const [selectedBook, setSelectedBook] = useState<string>("");
   const [selectedChapter, setSelectedChapter] = useState<number>(1);
@@ -60,14 +76,16 @@ export function BibleReader({
   const [loadError, setLoadError] = useState<string>("");
   const [isControlsOpen, setIsControlsOpen] = useState(true);
   const [effectiveShowSettings, setInternalShowSettings] = useState(showSettings);
+  const [reference, setReference] = useState<string>(initialReference);
+  const [inputReference, setInputReference] = useState<string>(initialReference);
 
   // Data state
   const [bibleVersions, setBibleVersions] = useState<BibleVersion[]>([]);
   const [verses, setVerses] = useState<BiblePassageVerse[]>([]);
   const [availableBooks, setAvailableBooks] = useState<string[]>([]);
   const [availableChapters, setAvailableChapters] = useState<number[]>([]);
-  const [inputReference, setInputReference] = useState<string>(initialReference);
 
+  // Form handling
   const form = useForm<ReferenceFormValues>({
     defaultValues: {
       book: "",
@@ -76,15 +94,21 @@ export function BibleReader({
     }
   });
 
+  // Handle Bible data loading errors
+  useEffect(() => {
+    if (loading) {
+      setInitialLoading(true);
+    } else {
+      setInitialLoading(false);
+    }
+  }, [loading]);
+
   // Load available Bible versions
   useEffect(() => {
     const loadVersions = async () => {
       try {
         const versions = await getAvailableVersions();
         setBibleVersions(versions);
-        
-        // Set default version
-        setSelectedVersion(getDefaultVersionId());
       } catch (error) {
         console.error("Failed to load Bible versions:", error);
         toast.error("Failed to load Bible versions", { 
@@ -94,7 +118,7 @@ export function BibleReader({
     };
     
     loadVersions();
-  }, []); // Only load versions once on mount
+  }, []);
 
   // Load available books when version changes
   useEffect(() => {
@@ -120,7 +144,6 @@ export function BibleReader({
     setLoading(true);
     setLoadError("");
     try {
-      console.log("Fetching passage:", ref, "version:", selectedVersion);
       const response = await fetchBiblePassage(ref, selectedVersion);
       
       if (response.error) {
@@ -128,7 +151,6 @@ export function BibleReader({
         return;
       }
       
-      console.log("Received passage:", response);
       setVerses(response.passage);
       setReference(response.reference);
       
@@ -187,20 +209,18 @@ export function BibleReader({
     }
   };
 
-  const handleChapterChange = (chapter: string) => {
+  const handleChapterChange = async (chapter: string) => {
     const chapterNum = parseInt(chapter, 10);
+    if (isNaN(chapterNum) || !selectedBook) return;
+
     setSelectedChapter(chapterNum);
     form.setValue("chapter", chapter);
     
-    let newRef = `${selectedBook} ${chapterNum}`;
-    if (selectedVerse) {
-      newRef += `:${selectedVerse}`;
-    }
-    
+    const newRef = `${selectedBook} ${chapterNum}`;
     setInputReference(newRef);
     loadPassage(newRef);
   };
-  
+
   const handleVerseChange = (verse: string) => {
     setSelectedVerse(verse);
     form.setValue("verse", verse);
@@ -253,6 +273,8 @@ export function BibleReader({
     }
     
     const newChapter = availableChapters[newIndex];
+    if (!newChapter) return;
+
     const newRef = `${selectedBook} ${newChapter}`;
     setInputReference(newRef);
     form.setValue("chapter", newChapter.toString());
@@ -268,11 +290,9 @@ export function BibleReader({
     });
   };
 
-  // No API provider changes needed since we're using local data only
   const handleVersionChange = (versionId: string) => {
     setSelectedVersion(versionId);
-    
-    // The version change will trigger a reload of the passage
+    // The version change effect will trigger a reload
   };
 
   if (initialLoading) {

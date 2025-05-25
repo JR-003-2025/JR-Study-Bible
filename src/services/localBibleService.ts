@@ -1,19 +1,5 @@
 import { BibleData, BiblePassageResponse, BibleVersion, BiblePassageVerse } from './types';
-import kjvData from '../../bible_data/kjv.json';
-import asvData from '../../bible_data/asv.json';
-import bbeData from '../../bible_data/bbe.json';
-
-const bibleVersions: { [key: string]: BibleData } = {
-  'kjv': kjvData as BibleData,
-  'asv': asvData as BibleData,
-  'bbe': bbeData as BibleData
-};
-
-export const availableVersions: BibleVersion[] = [
-  { id: 'kjv', name: 'King James Version', abbreviation: 'KJV' },
-  { id: 'asv', name: 'American Standard Version', abbreviation: 'ASV' },
-  { id: 'bbe', name: 'Bible in Basic English', abbreviation: 'BBE' }
-];
+import { loadBibleVersion } from './bibleDataLoader';
 
 const normalizeBookName = (book: string): string => {
   // Common abbreviations and their full names
@@ -130,7 +116,7 @@ export const getPassage = async (reference: string, version: string = 'kjv'): Pr
     }
 
     const [book, chapterVerse] = parts;
-    const bibleData = bibleVersions[version.toLowerCase()];
+    const bibleData = await loadBibleVersion(version);
     if (!bibleData) {
       return {
         passage: [],
@@ -271,7 +257,7 @@ export const getPassage = async (reference: string, version: string = 'kjv'): Pr
 };
 
 export const getAvailableBooks = async (version: string = 'kjv'): Promise<string[]> => {
-  const bibleData = bibleVersions[version.toLowerCase()];
+  const bibleData = await loadBibleVersion(version);
   if (!bibleData) {
     throw new Error(`Bible version ${version} not found`);
   }
@@ -279,7 +265,7 @@ export const getAvailableBooks = async (version: string = 'kjv'): Promise<string
 };
 
 export const getAvailableChapters = async (book: string, version: string = 'kjv'): Promise<number[]> => {
-  const bibleData = bibleVersions[version.toLowerCase()];
+  const bibleData = await loadBibleVersion(version);
   if (!bibleData) {
     throw new Error(`Bible version ${version} not found`);
   }
