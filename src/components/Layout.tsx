@@ -17,7 +17,7 @@ export function Header() {
           <div className="bg-white/10 p-2 rounded-full">
             <Book className="h-6 w-6 text-bible-gold" />
           </div>
-          <Link to="/" className="text-2xl font-serif font-bold">JR Study Bible</Link>
+          <Link to="/" className="text-2xl font-serif font-bold">Divine Insight</Link>
         </div>
         
         <div className="flex items-center md:hidden">
@@ -100,7 +100,7 @@ export function Footer() {
   return (
     <footer className="bg-bible-darkblue text-white py-4 px-6 mt-auto">
       <div className="container mx-auto text-center text-sm">
-        <p>&copy; {new Date().getFullYear()} JR Study Bible. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} Divine Insight. All rights reserved.</p>
       </div>
     </footer>
   );

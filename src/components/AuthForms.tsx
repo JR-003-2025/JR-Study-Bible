@@ -183,7 +183,7 @@ export function AuthTabs() {
           <CardHeader>
             <CardTitle className="text-xl">Welcome Back</CardTitle>
             <CardDescription>
-              Sign in to your account to access JR Study Bible tools
+              Sign in to your account to access Divine Insight tools
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -196,7 +196,7 @@ export function AuthTabs() {
           <CardHeader>
             <CardTitle className="text-xl">Create an Account</CardTitle>
             <CardDescription>
-              Sign up to get started with JR Study Bible
+              Sign up to get started with Divine Insight
             </CardDescription>
           </CardHeader>
           <CardContent>

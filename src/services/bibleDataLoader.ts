@@ -13,17 +13,37 @@ export async function loadBibleVersion(version: string): Promise<BibleData> {
   version = version.toLowerCase();
   
   // Try to get from IndexedDB first
-  const cachedData = await dbService.getBibleVersion(version);
-  if (cachedData) {
-    return cachedData;
+  try {
+    const cachedData = await dbService.getBibleVersion(version);
+    if (cachedData && cachedData.books && Array.isArray(cachedData.books)) {
+      return cachedData;
+    }
+  } catch (cacheError) {
+    console.warn('Failed to load from cache:', cacheError);
   }
 
   try {
     // Dynamically import the Bible data
     const data = await import(`../../bible_data/${version}.json`);
-    const bibleData = data as BibleData;
+    
+    // Validate the data structure
+    if (!data || !data.books || !Array.isArray(data.books)) {
+      throw new Error(`Invalid Bible data format for version "${version}"`);
+    }
+
+    // Create a cloneable object by removing the module properties
+    const bibleData: BibleData = JSON.parse(JSON.stringify({
+      translation: data.translation || version.toUpperCase(),
+      books: data.books
+    }));
+
     // Store in IndexedDB for future use
-    await dbService.setBibleVersion(version, bibleData);
+    try {
+      await dbService.setBibleVersion(version, bibleData);
+    } catch (cacheError) {
+      console.warn('Failed to cache Bible data:', cacheError);
+    }
+
     return bibleData;
   } catch (error) {
     console.error(`Failed to load Bible version: ${version}`, error);

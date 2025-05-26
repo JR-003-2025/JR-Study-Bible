@@ -85,7 +85,7 @@ const Index = () => {
         <div className="flex flex-col items-center justify-center my-10">
           <div className="max-w-4xl text-center mb-12 animate-fade-in">
             <h1 className="text-5xl font-serif font-bold mb-5 text-bible-blue bg-gradient-to-r from-bible-blue to-blue-600 bg-clip-text text-transparent">
-              JR Study Bible
+              Divine Insight
             </h1>
             <p className="text-2xl mb-8 font-medium">
               Your advanced theological research companion.
@@ -122,7 +122,7 @@ const Index = () => {
             )}
           </div>
           <h1 className="text-4xl font-serif font-bold text-bible-blue mb-3 bg-gradient-to-r from-bible-blue to-blue-700 bg-clip-text text-transparent">
-            Welcome to JR Study Bible
+            Welcome to Divine Insight
           </h1>
           <p className="text-gray-600">
             Choose a tool below or continue with your recent work.
@@ -184,7 +184,7 @@ const Index = () => {
           className="animate-fade-in"
         >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-serif font-bold text-xl text-bible-blue">About JR Study Bible</h2>
+            <h2 className="font-serif font-bold text-xl text-bible-blue">About Divine Insight</h2>
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm">
                 {isAboutOpen ? "Hide Details" : "Learn More"}
@@ -198,10 +198,10 @@ const Index = () => {
               <CardContent className="pt-6">
                 <div className="prose prose-sm max-w-none">
                   <p>
-                    JR Study Bible uses advanced AI technology to help pastors, theology students, and anyone studying the Bible gain deeper insights into scripture. Our tools provide rich contextual information, theological analysis, and practical applications.
+                    Divine Insight uses advanced AI technology to help pastors, theology students, and anyone studying the Bible gain deeper insights into scripture. Our tools provide rich contextual information, theological analysis, and practical applications.
                   </p>
                   <p className="mt-2">
-                    Powered by the Groq LLM API, JR Study Bible delivers fast, accurate theological content to support your Bible study, sermon preparation, and spiritual growth.
+                    Powered by the Groq LLM API, Divine Insight delivers fast, accurate theological content to support your Bible study, sermon preparation, and spiritual growth.
                   </p>
                 </div>
               </CardContent>

@@ -13,13 +13,43 @@ export const fetchBiblePassage = async (
   version: string = 'kjv'
 ): Promise<BiblePassageResponse> => {
   try {
-    return await getPassage(reference, version);
+    // Handle empty or invalid references
+    if (!reference?.trim()) {
+      return {
+        passage: [],
+        reference: '',
+        error: 'Please enter a Bible reference'
+      };
+    }
+
+    const response = await getPassage(reference, version);
+    
+    // Add more detailed error messages
+    if (response.error) {
+      return {
+        passage: [],
+        reference,
+        error: response.error
+      };
+    }
+
+    // Validate the response
+    if (!response.passage || response.passage.length === 0) {
+      return {
+        passage: [],
+        reference,
+        error: 'No verses found for this reference'
+      };
+    }
+
+    return response;
   } catch (error) {
     console.error('Error fetching Bible passage:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch Bible passage';
     return {
       passage: [],
       reference,
-      error: 'Failed to fetch Bible passage'
+      error: errorMessage
     };
   }
 };
@@ -27,7 +57,7 @@ export const fetchBiblePassage = async (
 export const getAvailableBooks = async (version: string = 'kjv'): Promise<string[]> => {
   try {
     const data = await import(`../../bible_data/${version}.json`);
-    return Object.keys(data.books);
+    return data.books.map(book => book.name);
   } catch (error) {
     console.error('Error loading Bible books:', error);
     return [];
@@ -40,11 +70,11 @@ export const getAvailableChapters = async (
 ): Promise<number[]> => {
   try {
     const data = await import(`../../bible_data/${version}.json`);
-    const book = data.books[bookName];
+    const book = data.books.find(b => b.name === bookName);
     if (!book) {
       throw new Error(`Book ${bookName} not found`);
     }
-    const chapters = Object.keys(book).map(ch => parseInt(ch, 10));
+    const chapters = book.chapters.map(ch => ch.chapter);
     return chapters.sort((a, b) => a - b);
   } catch (error) {
     console.error('Error loading chapters:', error);
